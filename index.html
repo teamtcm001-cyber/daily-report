@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Daily Report">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231565c0'/%3E%3Ctext x='32' y='42' font-size='28' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EDR%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" id="touchIcon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%231565c0'/%3E%3C/svg%3E">
+<title>Daily Report</title>
+<style>
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html{-webkit-text-size-adjust:100%}
+html,body{margin:0;height:100%;font-family:"Calibri","Leelawadee UI","Tahoma",sans-serif;font-size:14px;color:#222;background:#e9ecef}
+.app{display:flex;height:100vh}
+.editor{width:480px;min-width:380px;max-width:50vw;overflow-y:auto;background:#fff;border-right:1px solid #bbb;padding:10px 12px 40px}
+.preview-pane{flex:1;overflow:auto;padding:12px;background:#9aa0a6}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:-10px;background:#fff;padding:8px 0;z-index:5;border-bottom:1px solid #ddd}
+.topbar h1{font-size:18px;margin:0}
+button{font:inherit;padding:5px 10px;border:1px solid #888;background:#f4f4f4;border-radius:4px;cursor:pointer}
+button:hover{background:#e6e6e6}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:#1565c0;color:#fff;border-color:#0d47a1;font-weight:bold}
+button.primary:hover{background:#0d47a1}
+button.danger{color:#b71c1c;border-color:#b71c1c}
+button.sm{padding:2px 7px}
+input[type=text],input[type=number],input[type=date],select,textarea{font:inherit;padding:4px 6px;border:1px solid #999;border-radius:4px;width:100%;background:#fff}
+textarea{resize:vertical}
+.card{border:1px solid #ccc;border-radius:6px;margin:10px 0;padding:8px 10px;background:#fafafa}
+.card>h2,.card>summary{font-size:15px;margin:0 0 6px;font-weight:bold}
+details.card>summary{cursor:pointer}
+.f{display:block;margin:6px 0}.f>span{display:block;font-size:12px;color:#555;margin-bottom:2px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.row>.grow{flex:1;min-width:120px}
+.warn{background:#fff3cd;border:1px solid #e0a800;color:#664d03;padding:8px;border-radius:4px;margin:8px 0}
+.note{font-size:12px;color:#555;margin:4px 0}
+.status{font-size:12px;color:#2e7d32}
+.pie-edit{width:230px;height:230px;touch-action:none;cursor:crosshair;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.pies{display:flex;gap:8px;flex-wrap:wrap}
+.pies .pie-edit{width:170px;height:170px}
+.pies h3{margin:0;text-align:center;font-size:13px}
+.brushes label{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;cursor:pointer}
+.brushes input:checked~span{font-weight:bold;text-decoration:underline}
+.sw{display:inline-block;width:14px;height:14px;border:1px solid #000;vertical-align:middle}
+.noise-opts label{display:inline-block;padding:4px 10px;border:1px solid #000;margin:0 4px 4px 0;cursor:pointer;min-width:60px;text-align:center}
+.noise-opts input{margin-right:4px}
+.mp{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px}
+.mp .mpi{display:flex;flex-direction:column;font-size:12px;color:#444;min-width:0}
+.mp input{padding:3px 4px;text-align:center;min-width:0;flex:1;width:100%}
+.stp{display:flex;gap:3px;align-items:stretch}
+.stp button{width:30px;padding:0;font-size:18px;line-height:1;flex:none}
+.tabbar{display:none}
+.drop{border:2px dashed #888;border-radius:6px;padding:12px;text-align:center;color:#555;background:#fff}
+.drop.over{background:#e3f2fd;border-color:#1565c0}
+.ph{display:flex;gap:8px;align-items:center;border:1px solid #ccc;background:#fff;padding:5px;margin:6px 0;border-radius:4px}
+.ph img{width:84px;height:63px;object-fit:contain;background:#eee;cursor:zoom-in;flex:none}
+.ph .cap{flex:1;min-width:0}
+.ph .btns{display:flex;flex-direction:column;gap:2px}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:50;cursor:zoom-out}
+.lightbox img{max-width:96vw;max-height:96vh;object-fit:contain}
+.lightbox[hidden],.warn[hidden]{display:none}
+
+/* ---------- preview / print pages ---------- */
+#pvWrap{margin:0 auto}
+#pages{width:210mm;transform-origin:top left}
+.sheet{width:210mm;padding:10mm;background:#fff;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,.5);font-family:"Calibri","Leelawadee UI","Tahoma",sans-serif;font-size:11pt;color:#000;line-height:20px;overflow:hidden}
+.sheet.first{min-height:297mm}
+.sheet.photo{height:297mm}
+.rp-bar{background:#D9D9D9;text-align:center}
+.rp-bar.blue{background:#CDE9FA;text-align:left;padding-left:2px}
+.rp-bar.salmon{background:#F8CBAD;text-align:center}
+.rp-head{display:flex;justify-content:space-between;padding:0 2px}
+.rp-proj{padding:0 2px;margin-bottom:8px;min-height:20px}
+.rp-ov{display:grid;grid-template-columns:1fr 120px 100px 80px}
+.rp-ov>div{padding:0 2px;white-space:nowrap}
+.rp-ov .v{text-align:right;padding-right:6px}
+.rp-ov .p{text-align:center}
+.rp-ov .span2{grid-column:3 / span 2}
+.rp-gap{height:20px}
+.rp-two{display:flex;justify-content:space-between;margin-top:8px}
+.rp-two .l{width:49.9%}.rp-two .r{width:37.9%}
+.rp-wbody{display:flex;align-items:center;gap:8px;padding-left:10px}
+.rp-wbody svg{width:175px;height:175px;flex:none}
+.rp-leg div{display:flex;height:20px}
+.rp-leg i{display:block;width:88px;border:1px solid #000;margin-right:2px}
+.rp-nrows{padding:12px 0 0 64px}
+.rp-nrow{display:flex;height:20.5px;align-items:center}
+.rp-nrow .ck{width:22px;font-family:"Segoe UI Symbol","Leelawadee UI","Calibri",sans-serif;font-size:15pt;line-height:20px}
+.rp-nrow .nb{width:100px;text-align:center;border:1px solid #000;margin-left:3px;line-height:19px}
+.rp-nrow .nl{padding-left:3px}
+.rp-work{display:flex;margin-top:4px;align-items:center}
+.rp-work .d{width:166px;text-align:center;font-size:12pt}
+.rp-work .n{width:254px;text-align:center;font-size:12pt}
+.rp-work svg{width:160px;height:160px;display:block;margin:0 auto}
+.rp-work .lg{margin-left:16px;display:flex;align-items:center}
+.rp-work .lg i{display:block;width:84px;height:20px;background:#000;margin-right:2px}
+.rp-mp{width:100%;border-collapse:collapse;margin-top:10px;border:1px solid #000;table-layout:fixed}
+.rp-mp td{padding:0 2px;border-bottom:1px solid #d0d0d0;height:20px;line-height:19px}
+.rp-mp tr:last-child td{border-bottom:none}
+.rp-mp td.c{text-align:right;padding-right:36px;width:12%}
+.rp-mp td.nm{width:21.3%}
+.rp-mp td.sep{border-left:1px solid #000}
+.rp-tot{text-align:right;font-size:9pt;color:#444;margin:2px 4px}
+.rp-prog{padding:2px 2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.rp-sp{height:8px}
+.rp-slot{height:122mm;display:flex;flex-direction:column;align-items:center;padding-top:5mm}
+.rp-ph{width:140mm;height:105mm;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;background:#fff}
+.rp-ph img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.rp-cap{text-align:center;margin-top:2mm;max-width:170mm;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-height:40px}
+
+body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+@media screen and (max-width:1179.98px){
+ html,body{height:auto}
+ .app{display:block;height:auto;min-height:100vh}
+ .tabbar{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #bbb;padding:calc(6px + env(safe-area-inset-top)) 8px 6px}
+ .tabs{display:flex;gap:4px;flex:1}
+ .tab{flex:1;max-width:200px}
+ .tab.on{background:#1565c0;color:#fff;border-color:#0d47a1;font-weight:bold}
+ .editor{width:auto;max-width:none;min-width:0;border:0;overflow:visible;padding:6px 12px calc(40px + env(safe-area-inset-bottom))}
+ .editor>.topbar{display:none}
+ .preview-pane{overflow:visible;padding:12px 8px}
+ body.tab-edit .preview-pane{display:none}
+ body.tab-prev .editor{display:none}
+}
+@media screen and (max-width:1179.98px),screen and (pointer:coarse){
+ button{min-height:44px;padding:8px 14px;font-size:16px}
+ button.sm{min-width:44px;padding:8px}
+ input[type=text],input[type=number],input[type=date],select,textarea{font-size:16px;min-height:44px}
+ details.card>summary{min-height:44px;display:flex;align-items:center}
+ .brushes label,.noise-opts label{min-height:44px;display:inline-flex;align-items:center}
+ .brushes input,.noise-opts input{width:22px;height:22px}
+ .pie-edit{width:300px;height:300px}
+ .pies .pie-edit{width:270px;height:270px}
+ .stp button{width:44px}
+ .ph img{width:110px;height:82px}
+ .drop{border:none;padding:0;background:none}
+ .drop .dropHint{display:none}
+ .note{font-size:13px}
+}
+@media screen{.sheet.photo{content-visibility:auto;contain-intrinsic-size:auto 1123px}}
+@page{size:A4 portrait;margin:10mm}
+@media print{
+ html,body{height:auto;background:#fff;overflow:visible}
+ .editor,.lightbox,.tabbar{display:none!important}
+ .app{display:block;height:auto}
+ .preview-pane{display:block!important;overflow:visible;padding:0;background:#fff}
+ #pvWrap{width:auto!important;height:auto!important;margin:0}
+ #pages{transform:none!important;width:190mm}
+ .sheet{width:190mm;padding:0;margin:0;box-shadow:none;break-after:page;page-break-after:always;overflow:visible}
+ .sheet.first{min-height:0}
+ .sheet.photo{height:274mm;overflow:hidden}
+ #pages>.sheet:last-child{break-after:auto;page-break-after:auto}
+ .rp-slot{break-inside:avoid}
+}
+</style>
+</head>
+<body class="tab-edit">
+<header class="tabbar" id="tabbar">
+ <div class="tabs"><button class="tab on" id="tabEdit">กรอกข้อมูล</button><button class="tab" id="tabPrev">ตัวอย่าง</button></div>
+ <span class="status" id="status2"></span>
+ <button class="primary" id="btnPrint2">พิมพ์ / บันทึก PDF</button>
+</header>
+<div class="app">
+<aside class="editor" id="editor">
+ <div class="topbar"><h1>Daily Report</h1><span class="status" id="status"></span><button class="primary" id="btnPrint">พิมพ์ / บันทึก PDF</button></div>
+ <div class="warn" id="warn" hidden></div>
+ <p class="note">iPad: กดพิมพ์ แล้วเลือก แชร์ → บันทึกไปยังไฟล์ เพื่อได้ PDF</p>
+ <p class="note">ข้อมูลถูกเก็บไว้ในเบราว์เซอร์นี้เท่านั้น (ไม่ซิงค์ผ่าน OneDrive) ควรกด "Export JSON" เก็บสำรองไว้ในโฟลเดอร์ OneDrive เป็นระยะ</p>
+
+ <details class="card" id="dSet"><summary>ตั้งค่าโครงการ</summary>
+  <label class="f"><span>ชื่อโครงการ</span><input type="text" id="sName"></label>
+  <label class="f"><span>จัดทำโดย (DEVELOPED BY)</span><input type="text" id="sDev"></label>
+  <div class="row"><label class="grow"><span class="note">วันเริ่มสัญญา (START)</span><input type="date" id="sStart"></label>
+   <label class="grow"><span class="note">ระยะสัญญา (วัน)</span><input type="number" min="0" step="1" id="sContract"></label>
+   <label class="grow"><span class="note">ขยายเวลา (วัน)</span><input type="number" min="0" step="1" id="sExt"></label></div>
+  <div class="row"><label class="grow"><span class="note">ที่ตั้งโครงการ - ละติจูด (lat)</span><input type="number" step="any" id="sLat"></label>
+   <label class="grow"><span class="note">ลองจิจูด (lon)</span><input type="number" step="any" id="sLon"></label></div>
+  <label class="f"><span>วางลิงก์ Google Maps แบบเต็ม เพื่อดึงพิกัดอัตโนมัติ (ต้องมี !3d..!4d.. หรือ @lat,lon)</span><input type="text" id="sMap" placeholder="https://www.google.com/maps/place/.../@13.82,100.61,17z/..."></label>
+  <div class="note" id="mapHint">หมายเหตุ: ลิงก์สั้น (maps.app.goo.gl / goo.gl) แปลงในเบราว์เซอร์ไม่ได้ ให้เปิดลิงก์ในเบราว์เซอร์ แล้วคัดลอก URL เต็มจากแถบที่อยู่มาวาง หรือกรอกพิกัดเอง</div>
+  <label class="f"><span>ข้อความหมายเหตุการขยายเวลา (ใช้ {n} แทนจำนวนวัน, เว้นว่าง = อัตโนมัติ)</span><input type="text" id="sNote" placeholder="(ขยายระยะเวลา {n} วัน)"></label>
+  <div class="note" id="calcInfo"></div>
+ </details>
+
+ <section class="card"><h2>รายงานประจำวัน</h2>
+  <div class="row"><label class="grow"><span class="note">วันที่รายงาน</span><input type="date" id="rDate"></label>
+   <label class="grow"><span class="note">รายงานที่บันทึกไว้</span><select id="rList"></select></label></div>
+  <div class="warn" id="dateWarn" hidden></div>
+  <div class="row"><button id="bNew">รายงานใหม่</button><button id="bCopy">คัดลอกจากวันก่อนหน้า</button><button id="bDel" class="danger">ลบรายงาน</button></div>
+ </section>
+
+ <section class="card"><h2>สภาพอากาศ (DAILY WEATHER)</h2>
+  <div class="brushes row" id="brushes"></div>
+  <div class="row" id="wQuick"></div>
+  <div class="row"><button id="bWx" class="primary">ดึงข้อมูลสภาพอากาศอัตโนมัติ</button><span class="note" id="wxHint" hidden>ตั้งค่าพิกัดหน้างานก่อน (ตั้งค่าโครงการ)</span></div>
+  <div id="wPie"></div>
+  <div class="note" id="wStatus"></div>
+  <div class="note">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC-BY 4.0)</div>
+  <div class="note">เลือกสี แล้วคลิกหรือลากบนช่วงเวลา (แต่ละช่อง = 1 ชั่วโมง เริ่ม 00:00 ที่ด้านบน หมุนตามเข็มนาฬิกา)</div>
+ </section>
+
+ <section class="card"><h2>ระดับเสียงรบกวน (NOISE)</h2><div class="noise-opts" id="nOpts"></div></section>
+
+ <section class="card"><h2>ชั่วโมงทำงาน (WORK SYMBOL)</h2>
+  <div class="pies"><div><h3>กลางวัน</h3><div id="dayPie"></div></div><div><h3>กลางคืน</h3><div id="nightPie"></div></div></div>
+  <div class="row"><button id="pDay">กลางวัน 08–12 + 13–17</button><button id="pDayClr">ล้างกลางวัน</button><button id="pNight">กลางคืน 18–24</button><button id="pNightClr">ล้างกลางคืน</button></div>
+  <div class="note">คลิก/ลากเพื่อเปิด-ปิดแต่ละชั่วโมง กลางวัน = 06:00–18:00, กลางคืน = 18:00–06:00</div>
+ </section>
+
+ <section class="card"><h2>กำลังคน (MANPOWER)</h2><div class="mp" id="mp"></div><div class="row"><b>รวม: <span id="mpTot">0</span> คน</b></div></section>
+
+ <section class="card"><h2>ความคืบหน้างาน (Progress)</h2>
+  <textarea id="prog" rows="8" placeholder="หนึ่งรายการต่อหนึ่งบรรทัด"></textarea></section>
+
+ <section class="card"><h2>ภาพถ่ายหน้างาน</h2>
+  <div class="drop" id="drop"><span class="dropHint">ลากรูปมาวางที่นี่ หรือ </span><button id="bPhoto">เลือกรูปภาพ</button> <button id="bCam">ถ่ายรูป</button>
+   <input type="file" id="fPhoto" accept="image/*" multiple hidden>
+   <input type="file" id="fCam" accept="image/*" capture="environment" hidden>
+   <div class="note" id="phMsg">รูปจะถูกย่อเหลือด้านยาวไม่เกิน 1600 px</div></div>
+  <div id="phList"></div></section>
+
+ <section class="card"><h2>สำรอง / นำเข้าข้อมูล</h2>
+  <div class="row"><button id="bExp1">Export JSON (รายงานนี้)</button><button id="bExpAll">Export JSON (ทั้งหมด)</button><button id="bShare1" hidden>แชร์/บันทึกไปที่ Files หรือ OneDrive (รายงานนี้)</button><button id="bShareAll" hidden>แชร์/บันทึกไปที่ Files หรือ OneDrive (ทั้งหมด)</button><button id="bExpSet">Export การตั้งค่าโครงการ</button><button id="bImp">Import JSON</button>
+   <input type="file" id="fImp" accept=".json,application/json" hidden></div>
+  <div class="row" id="shareBox" hidden><button id="bShareGo" class="primary">พร้อมแล้ว — แตะเพื่อแชร์/บันทึก</button><a id="shareDl" href="#" download="export.json">ดาวน์โหลดแทน</a><span class="note" id="shareErr"></span></div>
+  <div class="note">ไฟล์การตั้งค่าโครงการ (.json) นำเข้าได้ด้วยปุ่ม Import JSON เช่นกัน</div>
+  <div class="note">Import จะรวมกับข้อมูลเดิม หากวันที่ซ้ำจะถามก่อนเขียนทับ</div>
+  <div class="note">Safari บน iPad/iPhone อาจล้างข้อมูลเว็บไซต์หากไม่ได้เปิดใช้งานเกิน 7 วัน (ยกเว้นเพิ่มหน้านี้ไปยังหน้าจอโฮม) แนะนำให้กด "เพิ่มไปยังหน้าจอโฮม" (Share → Add to Home Screen) และ Export JSON สำรองไว้เป็นประจำ</div>
+ </section>
+</aside>
+<main class="preview-pane" id="pvPane"><div id="pvWrap"><div id="pages"></div></div></main>
+</div>
+<div class="lightbox" id="lb" hidden><img alt=""></div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const SVGNS='http://www.w3.org/2000/svg';
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+function sv(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+const pad2=n=>String(n).padStart(2,'0');
+
+//#CALC-START
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function toDays(s){
+  if(typeof s!=='string')return NaN;
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!m)return NaN;
+  const y=+m[1],mo=+m[2],d=+m[3];if(y<2000||y>2100)return NaN;
+  const t=Date.UTC(y,mo-1,d),dt=new Date(t);
+  if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return NaN;
+  return Math.round(t/86400000);
+}
+function fmtDays(n){const d=new Date(n*86400000);return d.getUTCDate()+'-'+MON[d.getUTCMonth()]+'-'+String(d.getUTCFullYear()).slice(-2);}
+function calc(startStr,contract,ext,dateStr){
+  const start=toDays(startStr),date=toDays(dateStr);
+  if(isNaN(start)||isNaN(date)||!(contract>=1))return null;
+  const finish=start+contract-1+ext;
+  const months=(finish-start)/30;
+  const gone=date-start+1;
+  const remaining=finish-start-gone+1;
+  const summary=gone+remaining;
+  const pct=x=>summary?(x/summary*100):0;
+  return {finish,months:months.toFixed(2),gone,remaining,summary,
+    pGone:pct(gone).toFixed(2),pRem:pct(remaining).toFixed(2),
+    startTxt:fmtDays(start),finishTxt:fmtDays(finish),dateTxt:fmtDays(date)};
+}
+//#CALC-END
+
+//#WX-START
+const RAIN_MM=0.5;                                   // precipitation >= this (mm/h) => Rainy
+const RAIN_CODES=[61,62,63,64,65,66,67,80,81,82,95,96,97,98,99]; // rainy codes (need precip > 0)
+const CLOUD_PCT=60;                                  // cloud_cover >= this (%) => Cloudy
+const CLOUDY_CODES=[3,45,48,51,52,53,54,55,56,57];   // cloudy codes
+function classifyHour(code,precip,cloud){
+  code=+code;precip=+precip||0;cloud=+cloud||0;
+  if(precip>=RAIN_MM||(RAIN_CODES.indexOf(code)>=0&&precip>0))return 2;
+  if(cloud>=CLOUD_PCT||CLOUDY_CODES.indexOf(code)>=0)return 1;
+  return 0;
+}
+function classifyDay(raw){const o=[];for(let i=0;i<24;i++)o.push(classifyHour(raw.code[i],raw.precip[i],raw.cloud[i]));return o;}
+function parseMapsUrl(u){
+  const m=/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/.exec(u)||/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/.exec(u);
+  if(!m)return null;const la=+m[1],lo=+m[2];
+  return (Math.abs(la)<=90&&Math.abs(lo)<=180)?{lat:la,lon:lo}:null;
+}
+//#WX-END
+const WX_TIMEOUT_MS=10000;
+const WX_FORECAST='https://api.open-meteo.com/v1/forecast';
+const WX_HISTORY='https://historical-forecast-api.open-meteo.com/v1/forecast';
+const WCOL=['#92F592','#A6A6A6','#66FFFF'],WNAME=['Clear','Cloudy','Rainy'];
+const NCOL=['#FFFFFF','#FFFFCC','#F8CBAD','#FF6600','#A50021'],NLAB=['None','Little','Medium','Much','Severe'];
+const MPN=[['วิศวกร','โฟร์แมน','ช่างเทคนิค','จป.เทคนิค','Survey','Admin','Draft'],
+ ['ช่างปูน','ช่างไม้','ช่างเหล็ก','ช่างเชื่อม','ช่างไฟฟ้า','ช่างประปา','ช่างปรับอากาศ'],
+ ['ช่างติดรางน้ำ','ช่างก่อ/ฉาบ','ช่างปูกระเบื้อง','ช่างประตู','ช่างฝ้าเพดาน','ช่างทาสี','กรรมการ']];
+const MPFLAT=[].concat(MPN[0],MPN[1],MPN[2]);
+const DAY_DEF=[8,9,10,11,1,2,3,4],NIGHT_PRE=[6,7,8,9,10,11];
+const SETKEY='dr_settings_v1';
+const DEF_SET={name:'',dev:'TEAM-CM',start:'',contract:0,ext:0,note:'',lat:null,lon:null};
+
+let settings=Object.assign({},DEF_SET);
+try{const s=JSON.parse(localStorage.getItem(SETKEY)||'null');if(s&&typeof s==='object')settings=Object.assign(settings,s);}catch(e){}
+function saveSettings(){try{localStorage.setItem(SETKEY,JSON.stringify(settings));}catch(e){}}
+
+function clockArr(list){const a=Array(12).fill(false);list.forEach(i=>a[i]=true);return a;}
+function defReport(date){return {date,weather:Array(24).fill(0),noise:0,day:clockArr(DAY_DEF),night:Array(12).fill(false),manpower:Array(21).fill(0),progress:'',photos:[],updated:Date.now(),weatherSource:'',weatherFetched:0,weatherRaw:null};}
+function clampInt(v,max){const n=Math.floor(+v);return (isFinite(n)&&n>0)?Math.min(n,max):0;}
+function normalize(r){
+  const d=defReport(r.date);
+  if(Array.isArray(r.weather))d.weather=d.weather.map((_,i)=>{const v=+r.weather[i];return Number.isInteger(v)&&v>=0&&v<=2?v:0;});
+  d.noise=Math.min(4,Math.max(0,Math.floor(+r.noise)||0));
+  if(Array.isArray(r.day))d.day=d.day.map((_,i)=>!!r.day[i]);
+  if(Array.isArray(r.night))d.night=d.night.map((_,i)=>!!r.night[i]);
+  if(Array.isArray(r.manpower))d.manpower=d.manpower.map((_,i)=>clampInt(r.manpower[i],9999));
+  d.progress=typeof r.progress==='string'?r.progress:'';
+  if(Array.isArray(r.photos))d.photos=r.photos.filter(p=>p&&typeof p.data==='string'&&/^data:image\/(jpeg|png|webp|gif);base64,/.test(p.data)).map(p=>({id:String(p.id||Math.random().toString(36).slice(2)),data:p.data,caption:typeof p.caption==='string'?p.caption:''}));
+  d.updated=+r.updated||Date.now();
+  d.weatherSource=(r.weatherSource==='auto'||r.weatherSource==='manual')?r.weatherSource:'';
+  d.weatherFetched=+r.weatherFetched||0;
+  const w=r.weatherRaw;
+  if(w&&['code','precip','cloud'].every(k=>Array.isArray(w[k])&&w[k].length===24)){const nf=a=>a.map(v=>isFinite(+v)?+v:0);d.weatherRaw={code:nf(w.code),precip:nf(w.precip),cloud:nf(w.cloud),api:String(w.api||'')};}
+  return d;
+}
+
+/* ---------- IndexedDB ---------- */
+let db=null,dbOK=false;
+function dbOpen(){return new Promise((res,rej)=>{
+  setTimeout(()=>rej(new Error('timeout')),5000);
+  if(!window.indexedDB){rej(new Error('no indexedDB'));return;}
+  let q;try{q=indexedDB.open('DailyReportDB',1);}catch(e){rej(e);return;}
+  q.onupgradeneeded=()=>{q.result.createObjectStore('reports',{keyPath:'date'});};
+  q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);q.onblocked=()=>rej(new Error('blocked'));});}
+function tx(mode,fn){return new Promise((res,rej)=>{const t=db.transaction('reports',mode);const r=fn(t.objectStore('reports'));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);});}
+const dbPut=rec=>tx('readwrite',s=>s.put(rec));
+const dbGet=k=>tx('readonly',s=>s.get(k));
+const dbAll=()=>tx('readonly',s=>s.getAll());
+const dbKeys=()=>tx('readonly',s=>s.getAllKeys());
+const dbDel=k=>tx('readwrite',s=>s.delete(k));
+function showWarn(msg){const w=$('warn');w.textContent=msg;w.hidden=!msg;}
+function setStatus(t){$('status').textContent=t;$('status2').textContent=t;}
+
+/* ---------- state ---------- */
+let current=null,dirty=false,saveTimer=null,loadToken=0,curPersisted=false,photoJob=Promise.resolve(),wxEditSeq=0,wxTok=0,flushChain=Promise.resolve();
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function changed(){current.updated=Date.now();scheduleSave();schedulePreview();updateTotals();}
+function scheduleSave(){dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(flush,1000);if(dbOK)setStatus('กำลังบันทึก...');}
+function flush(){flushChain=flushChain.then(doFlush,doFlush);return flushChain;}
+async function doFlush(){
+  clearTimeout(saveTimer);if(!dirty||!current)return;
+  if(!dbOK){setStatus('');return;}
+  const snap=current;dirty=false;
+  try{await dbPut(snap);if(snap===current)curPersisted=true;showWarn('');setStatus('บันทึกแล้ว '+new Date().toLocaleTimeString('th-TH'));await refreshList();}
+  catch(e){dirty=true;showWarn('บันทึกลงเบราว์เซอร์ไม่สำเร็จ ('+(e&&e.name||'error')+') จะลองใหม่อัตโนมัติ หากยังไม่สำเร็จให้ Export JSON เก็บสำรองทันที');setStatus('');clearTimeout(saveTimer);saveTimer=setTimeout(flush,5000);}
+}
+async function refreshList(){
+  const sel=$('rList');sel.textContent='';
+  let keys=[];if(dbOK){try{keys=(await dbKeys()).slice();}catch(e){}}
+  if(current&&!keys.includes(current.date))keys.push(current.date);
+  keys.sort().reverse();
+  keys.forEach(k=>{const o=el('option',null,k);o.value=k;sel.appendChild(o);});
+  if(current)sel.value=current.date;
+}
+async function loadDate(date){
+  const tk=++loadToken;const ed=$('editor');ed.inert=true;
+  const back=()=>{if(current){$('rDate').value=current.date;$('rList').value=current.date;}};
+  try{
+    await photoJob;
+    await flush();
+    if(dirty&&current){
+      if(!confirm('บันทึกรายงานปัจจุบันไม่สำเร็จ ต้องการเปลี่ยนวันที่และทิ้งการแก้ไขที่ยังไม่บันทึกหรือไม่?\n(Cancel = อยู่หน้านี้ แล้ว Export JSON เก็บสำรอง)')){back();return;}
+      dirty=false;clearTimeout(saveTimer);
+    }
+    let rec=null;
+    if(dbOK){try{rec=await dbGet(date);}catch(e){
+      showWarn('อ่านรายงานวันที่ '+date+' ไม่สำเร็จ ('+(e&&e.name||'error')+') จึงไม่เปลี่ยนวันที่ เพื่อป้องกันการเขียนทับ');
+      if(current){back();return;}
+    }}
+    if(tk!==loadToken)return;
+    current=rec?normalize(rec):defReport(date);curPersisted=!!rec;dirty=false;clearTimeout(saveTimer);
+    wxTok++;wxBtn(false);wxMsg='';
+    $('rDate').value=date;
+    renderEditor();renderPreview();await refreshList();
+    if(!rec)autoWeather(true);
+  }finally{if(tk===loadToken)ed.inert=false;}
+}
+
+/* ---------- pies ---------- */
+function pie(n,labels,fillFn,titleFn){
+  const C=100,R=labels==='weather'?74:76;
+  const svg=sv('svg',{viewBox:'0 0 200 200'});
+  const paths=[];
+  for(let i=0;i<n;i++){
+    const a0=i*2*Math.PI/n,a1=(i+1)*2*Math.PI/n,f=x=>x.toFixed(2);
+    const p=sv('path',{d:'M'+C+' '+C+'L'+f(C+R*Math.sin(a0))+' '+f(C-R*Math.cos(a0))+'A'+R+' '+R+' 0 0 1 '+f(C+R*Math.sin(a1))+' '+f(C-R*Math.cos(a1))+'Z',stroke:'#000','stroke-width':'1.2','stroke-linejoin':'round','data-i':i});
+    if(titleFn){const t=sv('title',{});t.textContent=titleFn(i);p.appendChild(t);}
+    p.setAttribute('fill',fillFn(i));svg.appendChild(p);paths.push(p);
+  }
+  const txt=(s,x,y)=>{const t=sv('text',{x,y,'text-anchor':'middle','font-size':'15','font-family':'Calibri,Leelawadee UI,Tahoma,sans-serif',fill:'#000','pointer-events':'none'});t.textContent=s;svg.appendChild(t);};
+  if(labels==='weather'){txt('24',100,17);txt('12',100,196);txt('6',187,105);txt('18',13,105);}
+  else if(labels==='clock'){txt('12',100,16);txt('6',100,196);txt('3',190,105);txt('9',10,105);}
+  return {svg,paths};
+}
+function attachPaint(svg,onStart,onOver){
+  let active=false;
+  const idx=e=>{const t=document.elementFromPoint(e.clientX,e.clientY);return t&&t.dataset&&t.dataset.i!==undefined&&svg.contains(t)?+t.dataset.i:-1;};
+  svg.addEventListener('pointerdown',e=>{const i=idx(e);if(i<0)return;active=true;try{svg.setPointerCapture(e.pointerId);}catch(x){}onStart(i);e.preventDefault();});
+  svg.addEventListener('pointermove',e=>{if(!active)return;const i=idx(e);if(i>=0)onOver(i);});
+  const end=()=>{active=false;};
+  svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+}
+function dayHour(k){return k===0?12:(k<6?k+12:k);}
+function nightHour(k){return k>=6?k+12:k;}
+const hr=h=>pad2(h%24)+':00';
+
+/* ---------- editor ---------- */
+let brush=0,wEd=null,dEd=null,nEd=null;
+function buildEditor(){
+  const b=$('brushes');
+  WNAME.forEach((nm,i)=>{const l=el('label');const r=el('input');r.type='radio';r.name='brush';r.value=i;r.checked=i===0;
+    r.addEventListener('change',()=>brush=i);const sw=el('i','sw');sw.style.background=WCOL[i];l.append(r,sw,el('span',null,nm));b.appendChild(l);});
+  const wq=$('wQuick');
+  WNAME.forEach((nm,i)=>{const bt=el('button',null,'ทั้งวัน '+nm);bt.addEventListener('click',()=>{current.weather.fill(i);markManual();paintWeather();changed();});wq.appendChild(bt);});
+  wEd=pie(24,'weather',()=>WCOL[0],i=>pad2(i)+':00 – '+pad2(i+1)+':00');
+  wEd.svg.classList.add('pie-edit');$('wPie').appendChild(wEd.svg);
+  const setW=i=>{if(current.weather[i]!==brush){current.weather[i]=brush;markManual();paintWeather();changed();}};
+  attachPaint(wEd.svg,setW,setW);
+  const no=$('nOpts');
+  NLAB.forEach((nm,i)=>{const l=el('label');l.style.background=NCOL[i];l.style.color=i===4?'#fff':'#000';
+    const r=el('input');r.type='radio';r.name='noise';r.value=i;r.addEventListener('change',()=>{current.noise=i;changed();});
+    l.append(r,document.createTextNode(i+' '+nm));no.appendChild(l);});
+  [['day',dayHour],['night',nightHour]].forEach(([key,hf])=>{
+    const p=pie(12,'clock',()=>'#fff',k=>hr(hf(k))+' – '+hr(hf(k)+1));
+    p.svg.classList.add('pie-edit');$(key==='day'?'dayPie':'nightPie').appendChild(p.svg);
+    let val=true;
+    attachPaint(p.svg,i=>{val=!current[key][i];current[key][i]=val;paintWork();changed();},i=>{if(current[key][i]!==val){current[key][i]=val;paintWork();changed();}});
+    if(key==='day')dEd=p;else nEd=p;
+  });
+  $('pDay').onclick=()=>{current.day=clockArr(DAY_DEF);paintWork();changed();};
+  $('pDayClr').onclick=()=>{current.day.fill(false);paintWork();changed();};
+  $('pNight').onclick=()=>{current.night=clockArr(NIGHT_PRE);paintWork();changed();};
+  $('pNightClr').onclick=()=>{current.night.fill(false);paintWork();changed();};
+  const mp=$('mp'),labs=[];
+  for(let i=0;i<21;i++){
+    const l=el('div','mpi');l.appendChild(el('span',null,MPFLAT[i]));
+    const inp=el('input');inp.type='number';inp.min='0';inp.max='9999';inp.step='1';inp.inputMode='numeric';inp.pattern='[0-9]*';inp.dataset.i=i;inp.setAttribute('aria-label',MPFLAT[i]);
+    inp.addEventListener('input',()=>{current.manpower[i]=clampInt(inp.value,9999);changed();});
+    inp.addEventListener('blur',()=>{inp.value=current.manpower[i];});
+    const mk=(txt,d,lab)=>{const b=el('button',null,txt);b.type='button';b.setAttribute('aria-label',lab+' '+MPFLAT[i]);
+      b.addEventListener('click',()=>{current.manpower[i]=clampInt(current.manpower[i]+d,9999);inp.value=current.manpower[i];changed();});return b;};
+    const st=el('div','stp');st.append(mk('−',-1,'ลด'),inp,mk('+',1,'เพิ่ม'));
+    l.appendChild(st);labs.push(l);}
+  for(let r=0;r<7;r++)for(let c=0;c<3;c++)mp.appendChild(labs[c*7+r]);
+  $('prog').addEventListener('input',e=>{current.progress=e.target.value;changed();});
+}
+let wxMsg='';
+function hasCoords(){return typeof settings.lat==='number'&&typeof settings.lon==='number'&&isFinite(settings.lat)&&isFinite(settings.lon);}
+function wxBtn(busy){$('bWx').disabled=busy||!hasCoords();$('wxHint').hidden=hasCoords();}
+function markManual(){current.weatherSource='manual';wxEditSeq++;}
+function paintWeather(){wEd.paths.forEach((p,i)=>p.setAttribute('fill',WCOL[current.weather[i]]));wxStatus();}
+function wxStatus(){
+  let t;
+  if(current.weatherSource==='auto')t='อัตโนมัติจาก Open-Meteo • ดึงเมื่อ '+new Date(current.weatherFetched).toLocaleString('th-TH');
+  else if(current.weatherSource==='manual')t='แก้ไขเอง';
+  else t='ค่าเริ่มต้น (ยังไม่ได้ดึงข้อมูล)';
+  $('wStatus').textContent=t+(wxMsg?' | '+wxMsg:'');
+}
+async function fetchJson(url,signal){
+  const r=await fetch(url,{signal});let j=null;try{j=await r.json();}catch(e){}
+  if(!r.ok||!j||j.error)throw Object.assign(new Error(j&&j.reason||('HTTP '+r.status)),{api:true});
+  return j;
+}
+async function fetchWeatherRaw(date){
+  const q='?latitude='+encodeURIComponent(settings.lat)+'&longitude='+encodeURIComponent(settings.lon)+'&hourly=weather_code,precipitation,cloud_cover&timezone=Asia%2FBangkok&start_date='+date+'&end_date='+date;
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),WX_TIMEOUT_MS);
+  try{
+    let lastErr=null;
+    for(const api of [WX_FORECAST,WX_HISTORY]){
+      try{
+        const j=await fetchJson(api+q,ac.signal);const h=j.hourly;
+        const ok=h&&['time','weather_code','precipitation','cloud_cover'].every(k=>Array.isArray(h[k])&&h[k].length>=24);
+        if(!ok){lastErr=Object.assign(new Error('incomplete'),{incomplete:true});continue;}
+        if(h.weather_code.slice(0,24).every(v=>v==null)){lastErr=Object.assign(new Error('no data'),{api:true});continue;}
+        const nn=a=>a.slice(0,24).map(v=>(v!=null&&isFinite(+v))?+v:0);
+        return {code:nn(h.weather_code),precip:nn(h.precipitation),cloud:nn(h.cloud_cover),api};
+      }catch(e){if(!e.api)throw e;lastErr=e;}
+    }
+    throw lastErr||new Error('no data');
+  }finally{clearTimeout(to);}
+}
+async function autoWeather(silent){
+  if(!hasCoords())return;
+  const target=current;
+  if(target.weatherSource==='manual'){
+    if(silent)return;
+    if(!confirm('สภาพอากาศถูกแก้ไขเองแล้ว ต้องการเขียนทับด้วยข้อมูลอัตโนมัติหรือไม่?'))return;
+  }
+  const dd=toDays(target.date),td=toDays(todayStr());
+  if(dd>td+15){wxMsg='วันที่นี้ยังไกลเกินกว่าที่พยากรณ์ได้ (เกิน ~16 วัน) กรุณาระบุเอง';wxStatus();return;}
+  const tok=++wxTok,seq=wxEditSeq;
+  wxMsg='กำลังดึงข้อมูล...';wxStatus();wxBtn(true);
+  try{
+    const raw=await fetchWeatherRaw(target.date);
+    if(target!==current||tok!==wxTok)return;
+    if(wxEditSeq!==seq){wxMsg='ไม่เติมข้อมูลอัตโนมัติ เพราะมีการแก้ไขสภาพอากาศเองระหว่างดึงข้อมูล';wxStatus();return;}
+    target.weather=classifyDay(raw);target.weatherRaw=raw;target.weatherSource='auto';target.weatherFetched=Date.now();
+    wxMsg='';paintWeather();
+    if(silent&&!curPersisted&&!dirty)schedulePreview();else changed();   // auto-fill alone never creates a saved report
+  }catch(e){
+    if(target!==current||tok!==wxTok)return;
+    wxMsg=(e&&e.name==='AbortError')?'หมดเวลา 10 วินาที - ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
+      :(e&&e.incomplete)?'ข้อมูลไม่ครบจากเซิร์ฟเวอร์ Open-Meteo กรุณาลองใหม่หรือระบุเอง'
+      :(e&&e.api)?'ไม่มีข้อมูลสภาพอากาศของวันที่นี้ (อาจเก่าหรือไกลเกินไป) กรุณาระบุเอง'
+      :'เชื่อมต่ออินเทอร์เน็ตไม่ได้ - ไม่สามารถดึงข้อมูลสภาพอากาศ กรุณาระบุเอง';
+    wxStatus();
+  }finally{if(tok===wxTok)wxBtn(false);}
+}
+function paintWork(){dEd.paths.forEach((p,i)=>p.setAttribute('fill',current.day[i]?'#000':'#fff'));nEd.paths.forEach((p,i)=>p.setAttribute('fill',current.night[i]?'#000':'#fff'));}
+function updateTotals(){$('mpTot').textContent=current.manpower.reduce((a,b)=>a+b,0);}
+function renderEditor(){
+  paintWeather();paintWork();
+  document.querySelectorAll('input[name=noise]').forEach(r=>r.checked=+r.value===current.noise);
+  document.querySelectorAll('#mp input').forEach(i=>i.value=current.manpower[+i.dataset.i]);
+  $('prog').value=current.progress;updateTotals();renderPhotoList();
+}
+
+/* ---------- photos ---------- */
+async function readDims(file){
+  const buf=new DataView(await file.slice(0,262144).arrayBuffer());const n=buf.byteLength;
+  if(n>24&&buf.getUint32(0)===0x89504E47)return {w:buf.getUint32(16),h:buf.getUint32(20),o:1};
+  if(n<4||buf.getUint16(0)!==0xFFD8)return null;
+  let p=2,o=1;
+  while(p+4<=n){
+    if(buf.getUint8(p)!==0xFF){p++;continue;}
+    const m=buf.getUint8(p+1);
+    if(m===0xFF){p++;continue;}
+    if(m===0xD8||m===0x01||(m>=0xD0&&m<=0xD7)){p+=2;continue;}
+    const len=buf.getUint16(p+2);
+    if(m===0xE1&&p+14<=n&&buf.getUint32(p+4)===0x45786966){
+      const t=p+10,le=buf.getUint16(t)===0x4949,g16=x=>buf.getUint16(x,le),g32=x=>buf.getUint32(x,le);
+      const ifd=t+g32(t+4);
+      if(ifd+2<=n){const cnt=g16(ifd);for(let i=0;i<cnt&&ifd+2+i*12+12<=n;i++){const e=ifd+2+i*12;if(g16(e)===0x0112){o=g16(e+8);break;}}}
+    }
+    if(m>=0xC0&&m<=0xCF&&m!==0xC4&&m!==0xC8&&m!==0xCC)return (p+9<=n)?{h:buf.getUint16(p+5),w:buf.getUint16(p+7),o}:null;
+    p+=2+len;
+  }
+  return null;
+}
+const MAX_EDGE=1600;
+async function compress(file){
+  let bmp=null,src,w,h,url=null;
+  // read the header only, so a huge camera image is decoded once, already downscaled
+  let opts={imageOrientation:'from-image'};
+  try{
+    const d=await readDims(file);
+    if(d){const dw=d.o>=5?d.h:d.w,dh=d.o>=5?d.w:d.h;
+      if(Math.max(dw,dh)>MAX_EDGE){if(dw>=dh)opts.resizeWidth=MAX_EDGE;else opts.resizeHeight=MAX_EDGE;opts.resizeQuality='high';}}
+  }catch(e){}
+  try{bmp=await createImageBitmap(file,opts);}catch(e){bmp=null;}
+  if(!bmp&&(opts.resizeWidth||opts.resizeHeight)){try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){bmp=null;}}
+  try{
+    if(bmp){src=bmp;w=bmp.width;h=bmp.height;}
+    else{url=URL.createObjectURL(file);const img=new Image();img.src=url;await img.decode();src=img;w=img.naturalWidth;h=img.naturalHeight;}
+    const s=Math.min(1,MAX_EDGE/Math.max(w,h));
+    const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(w*s));cv.height=Math.max(1,Math.round(h*s));
+    const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(src,0,0,cv.width,cv.height);
+    let data;try{data=cv.toDataURL('image/jpeg',0.85);}finally{cv.width=cv.height=0;}return data;
+  }finally{if(bmp)bmp.close();if(url)URL.revokeObjectURL(url);}
+}
+function addFiles(files){
+  const arr=Array.from(files),target=current;
+  photoJob=photoJob.then(()=>doAddFiles(target,arr)).catch(e=>{$('phMsg').textContent='เกิดข้อผิดพลาด: '+(e&&e.message||e);});
+  return photoJob;
+}
+async function doAddFiles(target,arr){
+  const list=arr.filter(f=>f.type.startsWith('image/')||/\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(f.name));
+  if(!list.length){$('phMsg').textContent='ไม่พบไฟล์รูปภาพ';return;}
+  const fails=[];let n=0;
+  for(const f of list){
+    $('phMsg').textContent='กำลังประมวลผล '+(++n)+'/'+list.length+' ... (การเปลี่ยนวันที่จะรอจนเสร็จ)';
+    try{const data=await compress(f);target.photos.push({id:Math.random().toString(36).slice(2),data,caption:''});}
+    catch(e){fails.push(f.name);}
+  }
+  $('phMsg').textContent=fails.length?'ไม่สามารถอ่านไฟล์: '+fails.join(', ')+' (หากเป็น HEIC ให้เลือกจากคลังภาพ หรือตั้งค่ากล้องเป็น "เข้ากันได้มากที่สุด" / ใช้ JPG/PNG)':'เพิ่มรูปแล้ว '+(list.length-fails.length)+' รูป';
+  if(target===current){renderPhotoList();changed();}
+  else if(dbOK){target.updated=Date.now();try{await dbPut(target);}catch(e){alert('บันทึกรูปลงรายงานวันที่ '+target.date+' ไม่สำเร็จ');}}
+}
+const thumbs=new Map();let thumbQ=Promise.resolve();
+function pruneThumbs(ids){for(const [k,t] of Array.from(thumbs)){if(!ids.has(k)){if(t.url.indexOf('blob:')===0)URL.revokeObjectURL(t.url);thumbs.delete(k);}}}
+function thumbFor(p){
+  const t=thumbs.get(p.id);if(t&&t.data===p.data)return Promise.resolve(t.url);
+  thumbQ=thumbQ.then(async()=>{   // one at a time to bound transient memory
+    const cur=thumbs.get(p.id);if(cur&&cur.data===p.data)return cur.url;
+    if(!current||!current.photos.some(x=>x.id===p.id))return '';
+    const im=new Image();im.src=p.data;await im.decode();
+    const s=Math.min(1,240/Math.max(im.naturalWidth,im.naturalHeight));
+    const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(im.naturalWidth*s));cv.height=Math.max(1,Math.round(im.naturalHeight*s));
+    cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.7));cv.width=cv.height=0;im.removeAttribute('src');
+    const url=blob?URL.createObjectURL(blob):p.data;
+    if(cur&&cur.url.indexOf('blob:')===0)URL.revokeObjectURL(cur.url);
+    thumbs.set(p.id,{data:p.data,url});return url;
+  }).catch(()=>p.data);
+  return thumbQ;
+}
+function renderPhotoList(){
+  pruneThumbs(new Set(current.photos.map(p=>p.id)));
+  const box=$('phList');box.textContent='';
+  current.photos.forEach((p,i)=>{
+    const row=el('div','ph');
+    const im=el('img');im.loading='lazy';im.decoding='async';im.alt='รูปที่ '+(i+1);thumbFor(p).then(u=>{if(u)im.src=u;});im.title='คลิกเพื่อดูภาพขยาย';
+    im.addEventListener('click',()=>openLb(p.data));
+    const cap=el('input','cap');cap.type='text';cap.placeholder='คำอธิบายรูปที่ '+(i+1);cap.value=p.caption;
+    cap.addEventListener('input',()=>{p.caption=cap.value;changed();});
+    const bt=el('div','btns');
+    const up=el('button','sm','▲'),dn=el('button','sm','▼'),del=el('button','sm danger','ลบ');
+    up.disabled=i===0;dn.disabled=i===current.photos.length-1;
+    up.onclick=()=>{[current.photos[i-1],current.photos[i]]=[current.photos[i],current.photos[i-1]];renderPhotoList();changed();};
+    dn.onclick=()=>{[current.photos[i+1],current.photos[i]]=[current.photos[i],current.photos[i+1]];renderPhotoList();changed();};
+    del.onclick=()=>{current.photos.splice(i,1);renderPhotoList();changed();};
+    bt.append(up,dn,del);row.append(im,cap,bt);box.appendChild(row);
+  });
+}
+function openLb(src){const lb=$('lb');lb.firstElementChild.src=src;lb.hidden=false;}
+function closeLb(){const lb=$('lb');lb.hidden=true;lb.firstElementChild.removeAttribute('src');}
+
+/* ---------- preview ---------- */
+let pvTimer=null;
+function schedulePreview(){clearTimeout(pvTimer);pvTimer=setTimeout(renderPreview,150);}
+function header(sheet){
+  sheet.appendChild(el('div','rp-bar','DAILY REPORT'));
+  const c=calc(settings.start,settings.contract,settings.ext,current.date);
+  const h=el('div','rp-head');h.append(el('span',null,'DEVELOPED BY : '+settings.dev),el('span',null,isNaN(toDays(current.date))?'':fmtDays(toDays(current.date))));
+  sheet.appendChild(h);sheet.appendChild(el('div','rp-proj',settings.name));
+}
+function bar(text,cls){return el('div','rp-bar '+(cls||''),text);}
+function extNote(){const n=settings.ext;if(!(n>0))return '';const t=(settings.note||'').trim();return t?t.replace(/\{n\}/g,n):'(ขยายระยะเวลา '+n+' วัน)';}
+function ovRow(label,v,unit,pct,note){
+  const f=document.createDocumentFragment();
+  f.appendChild(el('div',null,label));f.appendChild(el('div','v',v));
+  if(note!==undefined){f.appendChild(el('div','span2',note));}else{f.appendChild(el('div',null,unit));f.appendChild(el('div','p',pct));}
+  return f;
+}
+function page1(){
+  const s=el('div','sheet first');header(s);
+  const c=calc(settings.start,settings.contract,settings.ext,current.date);
+  const ov=el('div','rp-ov');
+  const b1=el('div','rp-bar blue','Overall Project'),b2=el('div','rp-bar blue v',c?c.months:'—'),b3=el('div','rp-bar blue','MONTH'),b4=el('div','rp-bar blue','');
+  b2.style.textAlign='right';ov.append(b1,b2,b3,b4);
+  if(c){
+    ov.appendChild(ovRow('START',c.startTxt,'','',''));
+    ov.appendChild(ovRow('FINISH',c.finishTxt,'','',extNote()));
+    ov.appendChild(ovRow('TIME GONE',String(c.gone),'Days',c.pGone+'%'));
+    ov.appendChild(ovRow('REMAINING',String(c.remaining),'Days',c.pRem+'%'));
+    ov.appendChild(ovRow('SUMMARY',String(c.summary),'Days','100%'));
+  }else{
+    ov.appendChild(ovRow('START',(typeof settings.start==='string'&&!isNaN(toDays(settings.start)))?fmtDays(toDays(settings.start)):'—','','',''));
+    ov.appendChild(ovRow('FINISH','—','','',''));
+    ov.appendChild(ovRow('TIME GONE','—','Days','—'));
+    ov.appendChild(ovRow('REMAINING','—','Days','—'));
+    ov.appendChild(ovRow('SUMMARY','—','Days','—'));
+  }
+  s.appendChild(ov);s.appendChild(el('div','rp-gap'));
+  s.appendChild(bar('Overall Project','blue'));
+  const two=el('div','rp-two');
+  const L=el('div','l'),R=el('div','r');
+  L.appendChild(bar('DAILY WEATHER','salmon'));R.appendChild(bar('NOISE EFFECT SYMBOL','salmon'));
+  const wb=el('div','rp-wbody');
+  wb.appendChild(pie(24,'weather',i=>WCOL[current.weather[i]]).svg);
+  const lg=el('div','rp-leg');
+  WNAME.forEach((nm,i)=>{const r=el('div');const b=el('i');b.style.background=WCOL[i];r.append(b,el('span',null,nm));lg.appendChild(r);});
+  wb.appendChild(lg);L.appendChild(wb);
+  const nr=el('div','rp-nrows');
+  NLAB.forEach((nm,i)=>{const r=el('div','rp-nrow');r.appendChild(el('span','ck',current.noise===i?'☑':'☐'));
+    const nb=el('span','nb',String(i));nb.style.background=NCOL[i];if(i===4)nb.style.color='#fff';
+    r.append(nb,el('span','nl',nm));nr.appendChild(r);});
+  R.appendChild(nr);two.append(L,R);s.appendChild(two);
+  const wk=el('div','rp-work');
+  const d=el('div','d');d.appendChild(el('div',null,'กลางวัน'));d.appendChild(pie(12,'',i=>current.day[i]?'#000':'#fff').svg);
+  const n=el('div','n');n.appendChild(el('div',null,'กลางคืน'));n.appendChild(pie(12,'',i=>current.night[i]?'#000':'#fff').svg);
+  const lw=el('div','lg');lw.append(el('i'),el('span',null,'ชั่วโมงการทำงาน'));
+  wk.append(d,n,lw);
+  const ww=el('div');ww.style.marginTop='8px';ww.appendChild(bar('WORK SYMBOL','salmon'));ww.appendChild(wk);s.appendChild(ww);
+  const mw=el('div');mw.style.marginTop='6px';mw.appendChild(bar('MANPOWER','salmon'));
+  const t=el('table','rp-mp');const tb=el('tbody');
+  for(let r=0;r<7;r++){const tr=el('tr');for(let c2=0;c2<3;c2++){tr.append(el('td','nm'+(c2?' sep':''),MPN[c2][r]),el('td','c',String(current.manpower[c2*7+r])));}tb.appendChild(tr);}
+  t.appendChild(tb);mw.appendChild(t);
+  mw.appendChild(el('div','rp-tot','รวม '+current.manpower.reduce((a,b)=>a+b,0)+' คน'));
+  s.appendChild(mw);
+  const pw=el('div');pw.style.marginTop='10px';pw.appendChild(bar('Progress','salmon'));
+  current.progress.split(/\r?\n/).filter(l=>l.trim()!=='').forEach(l=>pw.appendChild(el('div','rp-prog',l)));
+  s.appendChild(pw);
+  return s;
+}
+const imgCache=new Map();
+function photoImg(p){let e=imgCache.get(p.id);if(!e||e.data!==p.data){const im=el('img');im.decoding='async';im.alt='';im.src=p.data;e={im,data:p.data};imgCache.set(p.id,e);}return e.im;}
+function photoPages(){
+  const out=[];
+  for(let i=0;i<current.photos.length;i+=2){
+    const s=el('div','sheet photo');header(s);s.appendChild(bar('ภาพถ่ายหน้างาน','salmon'));
+    for(let k=i;k<Math.min(i+2,current.photos.length);k++){
+      const p=current.photos[k];const slot=el('div','rp-slot');const box=el('div','rp-ph');
+      box.appendChild(photoImg(p));
+      slot.append(box,el('div','rp-cap',p.caption));s.appendChild(slot);
+    }
+    out.push(s);
+  }
+  return out;
+}
+function renderPreview(){
+  if(!current)return;
+  clearTimeout(pvTimer);
+  $('pages').replaceChildren(page1(),...photoPages());
+  const ids=new Set(current.photos.map(p=>p.id));for(const k of Array.from(imgCache.keys()))if(!ids.has(k))imgCache.delete(k);
+  fit();
+  if($('pvPane').offsetParent!==null)Array.from($('pages').querySelectorAll('img')).slice(0,8).forEach(i=>{if(i.decode)i.decode().catch(()=>{});});   // warm-up only while the preview is visible
+  const dw=$('dateWarn'),cc=calc(settings.start,settings.contract,settings.ext,current.date);
+  if(cc&&(cc.gone<1||cc.remaining<0)){dw.textContent='วันที่รายงานอยู่นอกช่วงสัญญา ('+(cc.gone<1?'ก่อนวันเริ่ม':'หลังวันสิ้นสุด')+') ค่า TIME GONE / REMAINING อาจไม่สมเหตุสมผล';dw.hidden=false;}else dw.hidden=true;
+  const c=calc(settings.start,settings.contract,settings.ext,current.date);
+  $('calcInfo').textContent=c?('สิ้นสุด '+c.finishTxt+' | '+c.months+' เดือน | ผ่านไป '+c.gone+' วัน ('+c.pGone+'%) | คงเหลือ '+c.remaining+' วัน ('+c.pRem+'%)'):'ตั้งค่าวันเริ่มสัญญาและระยะสัญญา (≥1 วัน) ในตั้งค่าโครงการ เพื่อคำนวณ TIME GONE / REMAINING';
+}
+function fit(){
+  const pane=$('pvPane'),pages=$('pages'),wrap=$('pvWrap');
+  const pw=210*96/25.4;const s=Math.min(1.25,Math.max(0.2,((pane.clientWidth||window.innerWidth)-24)/pw));
+  pages.style.transform='scale('+s+')';wrap.style.width=(pw*s)+'px';wrap.style.height=(pages.offsetHeight*s)+'px';
+}
+
+/* ---------- settings UI ---------- */
+function bindSettings(){
+  [['sLat','lat'],['sLon','lon']].forEach(([id,key])=>{const e=$(id);e.value=settings[key]==null?'':settings[key];
+    e.addEventListener('input',()=>{
+      if(e.value.trim()===''){settings[key]=null;saveSettings();wxBtn(false);return;}
+      const v=parseFloat(e.value);if(isFinite(v)&&Math.abs(v)<=(key==='lat'?90:180)){settings[key]=v;saveSettings();wxBtn(false);}});});
+  $('sMap').addEventListener('input',e=>{const p=parseMapsUrl(e.target.value);
+    if(p){settings.lat=p.lat;settings.lon=p.lon;$('sLat').value=p.lat;$('sLon').value=p.lon;saveSettings();wxBtn(false);$('mapHint').textContent='อ่านพิกัดได้: '+p.lat+', '+p.lon;}
+    else if(e.target.value.trim())$('mapHint').textContent='ไม่พบพิกัดในลิงก์ (ลิงก์สั้น goo.gl แปลงในเบราว์เซอร์ไม่ได้ ต้องใช้ URL เต็ม)';});
+  [['sName','name','s'],['sDev','dev','s'],['sStart','start','s'],['sContract','contract','n'],['sExt','ext','n'],['sNote','note','s']].forEach(([id,key,t])=>{
+    const e=$(id);e.value=settings[key];
+    e.addEventListener('input',()=>{
+      if(t==='n'){const v=Math.floor(+e.value);if(!isFinite(v)||v<0||v>99999)return;settings[key]=v;}
+      else{if(key==='start'&&e.value!==''&&isNaN(toDays(e.value)))return;settings[key]=e.value;}
+      saveSettings();schedulePreview();});});
+}
+function settingsToUI(){
+  [['sName','name'],['sDev','dev'],['sStart','start'],['sContract','contract'],['sExt','ext'],['sNote','note'],['sLat','lat'],['sLon','lon']].forEach(([id,k])=>{$(id).value=settings[k]==null?'':settings[k];});
+}
+function applySettings(s){Object.assign(settings,sanitizeSettings(s));saveSettings();settingsToUI();wxBtn(false);if(current)renderPreview();}
+function sanitizeSettings(s){
+  const o={};if(!s||typeof s!=='object')return o;
+  if(typeof s.name==='string')o.name=s.name;if(typeof s.dev==='string')o.dev=s.dev;if(typeof s.note==='string')o.note=s.note;
+  if(!isNaN(toDays(s.start)))o.start=s.start;
+  if(Number.isInteger(s.contract)&&s.contract>=0&&s.contract<=99999)o.contract=s.contract;
+  if(Number.isInteger(s.ext)&&s.ext>=0&&s.ext<=99999)o.ext=s.ext;
+  if(typeof s.lat==='number'&&Math.abs(s.lat)<=90)o.lat=s.lat;
+  if(typeof s.lon==='number'&&Math.abs(s.lon)<=180)o.lon=s.lon;
+  return o;
+}
+
+/* ---------- actions ---------- */
+function download(name,text){const b=new Blob([text],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);}
+const dotted=d=>d.replace(/-/g,'.');
+function fmtIso(n){const d=new Date(n*86400000);return d.getUTCFullYear()+'-'+pad2(d.getUTCMonth()+1)+'-'+pad2(d.getUTCDate());}
+async function doImport(file){
+  let obj;try{obj=JSON.parse(await file.text());}catch(e){alert('ไฟล์ JSON ไม่ถูกต้อง');return;}
+  const hasSet=!!(obj&&!Array.isArray(obj)&&obj.settings&&typeof obj.settings==='object');
+  const arr=Array.isArray(obj)?obj:(obj&&Array.isArray(obj.reports)?obj.reports:(hasSet?[]:null));
+  if(!arr){alert('ไม่พบข้อมูลรายงานในไฟล์');return;}
+  const byDate=new Map();let skipped=0,inFileDup=0;
+  arr.forEach(r=>{if(r&&typeof r==='object'&&!isNaN(toDays(r.date))){if(byDate.has(r.date))inFileDup++;byDate.set(r.date,normalize(r));}else skipped++;});
+  const recs=Array.from(byDate.values());
+  if(!recs.length){
+    if(hasSet){if(confirm('ไฟล์นี้เป็นการตั้งค่าโครงการ นำเข้าการตั้งค่าหรือไม่?')){applySettings(obj.settings);alert('นำเข้าการตั้งค่าโครงการแล้ว');}return;}
+    alert('ไม่พบรายงานที่ใช้ได้ในไฟล์');return;
+  }
+  if(!dbOK){alert('ไม่สามารถนำเข้าได้เนื่องจากเบราว์เซอร์ไม่อนุญาตให้บันทึกข้อมูล');return;}
+  await photoJob;await flush();
+  let exist;try{exist=new Set(await dbKeys());}catch(e){alert('อ่านข้อมูลเดิมไม่สำเร็จ ยกเลิกการนำเข้า');return;}
+  const dup=recs.filter(r=>exist.has(r.date)).map(r=>r.date);
+  let list=recs;
+  if(inFileDup)alert('ในไฟล์มีวันที่ซ้ำกัน '+inFileDup+' รายการ - ใช้รายการหลังสุดของแต่ละวัน');
+  if(dup.length&&!confirm('มีรายงานวันที่เดียวกันอยู่แล้ว '+dup.length+' วัน:\n'+dup.slice(0,10).join(', ')+(dup.length>10?' ...':'')+'\n\nกด OK = เขียนทับ, Cancel = ข้ามวันที่ซ้ำ'))list=recs.filter(r=>!exist.has(r.date));
+  let ok=0;const failed=[];
+  for(const r of list){try{await dbPut(r);ok++;}catch(e){failed.push(r.date);}}
+  if(obj&&!Array.isArray(obj)&&obj.settings&&confirm('นำเข้าการตั้งค่าโครงการด้วยไหม?')){applySettings(obj.settings);}
+  alert('นำเข้าสำเร็จ '+ok+' รายงาน'+(failed.length?'\nล้มเหลว '+failed.length+' รายการ: '+failed.slice(0,10).join(', '):'')+(skipped?'\nข้ามรายการที่วันที่ไม่ถูกต้อง '+skipped+' รายการ':''));
+  await loadDate(current.date);
+}
+function bindActions(){
+  const doPrint=()=>{
+    const old=document.title;const d=current.date.split('-');
+    document.title='Daily Report('+d[0]+'.'+d[1]+'.'+d[2]+')';
+    renderPreview();   // synchronous; cached <img> elements are reused so they are normally already decoded
+    const mq=window.matchMedia?window.matchMedia('print'):null;let done=false;
+    const onmq=e=>{if(!e.matches)restore();};
+    const restore=()=>{if(done)return;done=true;document.title=old;window.removeEventListener('afterprint',restore);if(mq&&mq.removeEventListener)mq.removeEventListener('change',onmq);};
+    window.addEventListener('afterprint',restore);
+    if(mq&&mq.addEventListener)mq.addEventListener('change',onmq);
+    setTimeout(restore,120000);
+    window.print();
+  };
+  $('btnPrint').onclick=doPrint;$('btnPrint2').onclick=doPrint;
+  const setTab=t=>{document.body.classList.toggle('tab-prev',t==='prev');document.body.classList.toggle('tab-edit',t!=='prev');
+    $('tabEdit').classList.toggle('on',t!=='prev');$('tabPrev').classList.toggle('on',t==='prev');
+    if(t==='prev')renderPreview();window.scrollTo(0,0);};
+  $('tabEdit').onclick=()=>setTab('edit');$('tabPrev').onclick=()=>setTab('prev');
+  $('rDate').addEventListener('change',e=>{if(!isNaN(toDays(e.target.value)))loadDate(e.target.value);else e.target.value=current.date;});
+  $('rList').addEventListener('change',e=>loadDate(e.target.value));
+  $('bNew').onclick=async()=>{
+    await flush();let d=todayStr();
+    if(dbOK){try{const k=(await dbKeys()).sort();if(k.length)d=fmtIso(toDays(k[k.length-1])+1);}catch(e){}}
+    loadDate(d);
+  };
+  $('bCopy').onclick=async()=>{
+    if(!dbOK){alert('ไม่สามารถอ่านรายงานที่บันทึกไว้ได้');return;}
+    await flush();
+    const keys=(await dbKeys()).filter(k=>k<current.date).sort();
+    if(!keys.length){alert('ไม่พบรายงานก่อนหน้าวันที่ '+current.date);return;}
+    const prev=normalize(await dbGet(keys[keys.length-1]));
+    if(!confirm('คัดลอกชั่วโมงทำงาน กำลังคน และ Progress จากวันที่ '+prev.date+' มาแทนที่ข้อมูลปัจจุบัน (ไม่รวมรูปภาพ)?'))return;
+    current.day=prev.day;current.night=prev.night;current.manpower=prev.manpower;current.progress=prev.progress;
+    renderEditor();changed();
+  };
+  $('bDel').onclick=async()=>{
+    if(!confirm('ลบรายงานวันที่ '+current.date+' ?'))return;
+    await photoJob;
+    if(dbOK){try{await dbDel(current.date);}catch(e){alert('ลบรายงานไม่สำเร็จ ('+(e&&e.name||'error')+') รายงานยังอยู่ในระบบ');return;}}
+    dirty=false;clearTimeout(saveTimer);wxTok++;wxBtn(false);
+    current=defReport(current.date);curPersisted=false;wxMsg='';renderEditor();renderPreview();await refreshList();setStatus('ลบแล้ว');
+  };
+  $('bWx').onclick=()=>autoWeather(false);
+  $('bPhoto').onclick=()=>$('fPhoto').click();
+  $('fPhoto').onchange=e=>{addFiles(e.target.files);e.target.value='';};
+  $('bCam').onclick=()=>$('fCam').click();
+  $('fCam').onchange=e=>{addFiles(e.target.files);e.target.value='';};
+  const dr=$('drop');
+  ['dragenter','dragover'].forEach(t=>dr.addEventListener(t,e=>{e.preventDefault();dr.classList.add('over');}));
+  ['dragleave','drop'].forEach(t=>dr.addEventListener(t,e=>{e.preventDefault();dr.classList.remove('over');}));
+  dr.addEventListener('drop',e=>{if(e.dataTransfer&&e.dataTransfer.files)addFiles(e.dataTransfer.files);});
+  window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
+  const canShareFiles=()=>{try{return typeof File!=='undefined'&&!!navigator.canShare&&navigator.canShare({files:[new File(['{}'],'a.json',{type:'application/json'})]});}catch(e){return false;}};
+  async function getExport(kind){
+    await photoJob;await flush();
+    if(kind==='cur')return {name:'Daily Report('+dotted(current.date)+').json',text:JSON.stringify({app:'DailyReportTool',version:2,settings,reports:[current]})};
+    let all=[];
+    if(dbOK){try{all=await dbAll();}catch(e){alert('อ่านข้อมูลทั้งหมดไม่สำเร็จ ส่งออกเฉพาะรายงานปัจจุบัน');all=[current];}}
+    else all=[current];
+    if((dirty||!dbOK)&&!all.some(r=>r.date===current.date))all.push(current);   // only unsaved-but-edited current
+    return {name:'DailyReport_ALL_'+dotted(todayStr())+'.json',text:JSON.stringify({app:'DailyReportTool',version:2,settings,reports:all})};
+  }
+  async function doExport(kind,share){
+    const x=await getExport(kind);
+    if(share){
+      try{await navigator.share({files:[new File([x.text],x.name,{type:'application/json'})],title:x.name});return;}
+      catch(e){if(e&&e.name==='AbortError')return;}   // otherwise fall back to a normal download
+    }
+    download(x.name,x.text);
+  }
+  $('bExp1').onclick=()=>doExport('cur',false);
+  $('bExpAll').onclick=()=>doExport('all',false);
+  let pend=null;
+  function hideShare(){if(pend&&pend.url)URL.revokeObjectURL(pend.url);pend=null;$('shareBox').hidden=true;$('shareErr').textContent='';}
+  async function prepShare(kind){
+    hideShare();
+    try{
+      const x=await getExport(kind);const file=new File([x.text],x.name,{type:'application/json'});const url=URL.createObjectURL(file);
+      pend={file,name:x.name,url};const a=$('shareDl');a.href=url;a.download=x.name;$('shareBox').hidden=false;
+    }catch(e){alert('เตรียมไฟล์ไม่สำเร็จ: '+(e&&e.message||e));}
+  }
+  $('bShare1').onclick=()=>prepShare('cur');
+  $('bShareAll').onclick=()=>prepShare('all');
+  $('bShareGo').onclick=()=>{   // navigator.share is called synchronously inside this tap (user activation preserved)
+    if(!pend)return;const f=pend.file,nm=pend.name;
+    const fail=e=>{$('shareErr').textContent='แชร์ไม่สำเร็จ ('+(e&&e.name||'error')+') กรุณาใช้ "ดาวน์โหลดแทน"';};
+    let pr;try{pr=navigator.share({files:[f],title:nm});}catch(e){fail(e);return;}
+    pr.then(()=>hideShare(),e=>{if(e&&e.name==='AbortError')return;fail(e);});
+  };
+  $('bExpSet').onclick=()=>download('DailyReport-settings.json',JSON.stringify({app:'DailyReportTool',version:2,type:'settings',settings,reports:[]},null,2));
+  if(canShareFiles()){$('bShare1').hidden=false;$('bShareAll').hidden=false;}
+  $('bImp').onclick=()=>$('fImp').click();
+  $('fImp').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)await doImport(f);};
+  $('lb').addEventListener('click',closeLb);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});
+  window.addEventListener('beforeunload',()=>{if(dirty)flush();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();});
+  if(window.ResizeObserver)new ResizeObserver(fit).observe($('pvPane'));else window.addEventListener('resize',fit);
+}
+
+/* ---------- init ---------- */
+(async function init(){
+  bindSettings();buildEditor();bindActions();wxBtn(false);
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});}catch(e){}
+  try{const cv=document.createElement('canvas');cv.width=cv.height=180;const x=cv.getContext('2d');x.fillStyle='#1565c0';x.fillRect(0,0,180,180);
+    x.fillStyle='#fff';x.font='bold 84px Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('DR',90,95);
+    $('touchIcon').href=cv.toDataURL('image/png');}catch(e){}
+  try{db=await dbOpen();dbOK=true;}catch(e){dbOK=false;showWarn('ไม่สามารถใช้ที่เก็บข้อมูลของเบราว์เซอร์ (IndexedDB) ได้ - ข้อมูลจะไม่ถูกบันทึกอัตโนมัติ ใช้ Export JSON เพื่อสำรองข้อมูล');}
+  await loadDate(todayStr());
+})();
+})();
+</script>
+</body>
+</html>
