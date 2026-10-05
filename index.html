@@ -67,7 +67,7 @@ details.card>summary{cursor:pointer}
 #pages{width:210mm;transform-origin:top left}
 .sheet{width:210mm;padding:10mm;background:#fff;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,.5);font-family:"Calibri","Leelawadee UI","Tahoma",sans-serif;font-size:11pt;color:#000;line-height:20px;overflow:hidden}
 .sheet.first{min-height:297mm}
-.sheet.photo{height:297mm}
+.sheet.photo,.sheet.cont{height:297mm}
 .rp-bar{background:#D9D9D9;text-align:center}
 .rp-bar.blue{background:#CDE9FA;text-align:left;padding-left:2px}
 .rp-bar.salmon{background:#F8CBAD;text-align:center}
@@ -140,33 +140,54 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
  .note{font-size:13px}
 }
 @media screen{.sheet.photo{content-visibility:auto;contain-intrinsic-size:auto 1123px}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;background:#fff;border:2px solid #1565c0;border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.35);max-width:92vw;text-align:center}
+.toast .row{justify-content:center}
+.toast a{padding:12px 8px;font-size:16px}
+#pdfStage,#msStage{position:fixed;left:-10000px;top:0;width:210mm;background:#fff;pointer-events:none}
+#pdfStage .sheet,#msStage .sheet{margin:0;box-shadow:none;content-visibility:visible;overflow:visible}
+#pdfStage .sheet{height:297mm;min-height:0;overflow:hidden}
+.setBanner{background:#fff3b0;border:3px solid #e0a800;color:#4d3b00;padding:12px 14px;border-radius:6px;margin:10px 0;font-size:16px;line-height:1.6}
+.setBanner .row{margin:8px 0 0}
+#pdfStage .rp-cap{display:block;max-height:40px;overflow:hidden}
+.iosWarn{background:#b71c1c;color:#fff;padding:12px 14px calc(12px) calc(14px + env(safe-area-inset-left));font-size:16px;line-height:1.6;position:relative;z-index:40}
+.iosWarn a{color:#fff;font-weight:bold;word-break:break-all}
+.iosWarn button{color:#000}
 @page{size:A4 portrait;margin:10mm}
 @media print{
  html,body{height:auto;background:#fff;overflow:visible}
- .editor,.lightbox,.tabbar{display:none!important}
+ .editor,.lightbox,.tabbar,.toast,#pdfStage,#msStage,.iosWarn{display:none!important}
  .app{display:block;height:auto}
  .preview-pane{display:block!important;overflow:visible;padding:0;background:#fff}
  #pvWrap{width:auto!important;height:auto!important;margin:0}
  #pages{transform:none!important;width:190mm}
  .sheet{width:190mm;padding:0;margin:0;box-shadow:none;break-after:page;page-break-after:always;overflow:visible}
  .sheet.first{min-height:0}
- .sheet.photo{height:274mm;overflow:hidden}
+ .sheet.photo,.sheet.cont{height:274mm;overflow:hidden}
  #pages>.sheet:last-child{break-after:auto;page-break-after:auto}
  .rp-slot{break-inside:avoid}
 }
 </style>
 </head>
 <body class="tab-edit">
+<div class="iosWarn" id="iosWarn" hidden>
+ <b>เปิดจากแอป OneDrive/Files โดยตรง — บันทึกข้อมูลและพิมพ์ไม่ได้</b> กรุณาเปิดผ่าน Safari ที่ลิงก์
+ <a id="iosUrl" href="https://teamtcm001-cyber.github.io/daily-report/" target="_blank" rel="noopener">https://teamtcm001-cyber.github.io/daily-report/</a>
+ <button id="bCopyUrl">คัดลอกลิงก์</button> <span id="copyMsg"></span>
+</div>
 <header class="tabbar" id="tabbar">
  <div class="tabs"><button class="tab on" id="tabEdit">กรอกข้อมูล</button><button class="tab" id="tabPrev">ตัวอย่าง</button></div>
  <span class="status" id="status2"></span>
- <button class="primary" id="btnPrint2">พิมพ์ / บันทึก PDF</button>
+ <button class="primary" id="btnPdf2">บันทึก PDF</button><button id="btnPrint2">พิมพ์</button>
 </header>
 <div class="app">
 <aside class="editor" id="editor">
- <div class="topbar"><h1>Daily Report</h1><span class="status" id="status"></span><button class="primary" id="btnPrint">พิมพ์ / บันทึก PDF</button></div>
+ <div class="topbar"><h1>Daily Report</h1><span class="status" id="status"></span><button class="primary" id="btnPdf">บันทึก PDF</button><button id="btnPrint">พิมพ์</button></div>
  <div class="warn" id="warn" hidden></div>
- <p class="note">iPad: กดพิมพ์ แล้วเลือก แชร์ → บันทึกไปยังไฟล์ เพื่อได้ PDF</p>
+ <div class="setBanner" id="setBanner" hidden>
+  <b>ยังไม่ได้ตั้งค่าโครงการ</b> — นำเข้าไฟล์ตั้งค่า (เช่น P06844_ABSS-settings.json) เพื่อให้คำนวณระยะเวลาและดึงสภาพอากาศได้
+  <div class="row"><button class="primary" id="bBanImp">นำเข้าไฟล์ตั้งค่า</button><button id="bBanSet">ตั้งค่าเอง</button></div>
+ </div>
+ <p class="note">iPad: กด "บันทึก PDF" แล้วแตะ "พร้อมแล้ว — แตะเพื่อแชร์/บันทึก" เพื่อบันทึกไปที่ Files หรือ OneDrive (ปุ่ม "พิมพ์" อาจใช้ไม่ได้เมื่อเปิดจากหน้าจอโฮม)</p>
  <p class="note">ข้อมูลถูกเก็บไว้ในเบราว์เซอร์นี้เท่านั้น (ไม่ซิงค์ผ่าน OneDrive) ควรกด "Export JSON" เก็บสำรองไว้ในโฟลเดอร์ OneDrive เป็นระยะ</p>
 
  <details class="card" id="dSet"><summary>ตั้งค่าโครงการ</summary>
@@ -231,6 +252,11 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </aside>
 <main class="preview-pane" id="pvPane"><div id="pvWrap"><div id="pages"></div></div></main>
 </div>
+<div class="toast" id="pdfBox" hidden>
+ <div id="pdfMsg"></div>
+ <div class="row" id="pdfAct" hidden><button class="primary" id="bPdfShare" hidden>พร้อมแล้ว — แตะเพื่อแชร์/บันทึก</button><a id="pdfDl" href="#" download="report.pdf">ดาวน์โหลด</a></div>
+ <button class="sm" id="pdfClose" hidden>ปิด</button>
+</div>
 <div class="lightbox" id="lb" hidden><img alt=""></div>
 
 <script>
@@ -293,14 +319,17 @@ const WCOL=['#92F592','#A6A6A6','#66FFFF'],WNAME=['Clear','Cloudy','Rainy'];
 const NCOL=['#FFFFFF','#FFFFCC','#F8CBAD','#FF6600','#A50021'],NLAB=['None','Little','Medium','Much','Severe'];
 const MPN=[['วิศวกร','โฟร์แมน','ช่างเทคนิค','จป.เทคนิค','Survey','Admin','Draft'],
  ['ช่างปูน','ช่างไม้','ช่างเหล็ก','ช่างเชื่อม','ช่างไฟฟ้า','ช่างประปา','ช่างปรับอากาศ'],
- ['ช่างติดรางน้ำ','ช่างก่อ/ฉาบ','ช่างปูกระเบื้อง','ช่างประตู','ช่างฝ้าเพดาน','ช่างทาสี','กรรมการ']];
+ ['ช่างติดรางน้ำ','ช่างก่อ/ฉาบ','ช่างปูกระเบื้อง','ช่างประตู','ช่างฝ้าเพดาน','ช่างทาสี','กรรมกร']];
 const MPFLAT=[].concat(MPN[0],MPN[1],MPN[2]);
 const DAY_DEF=[8,9,10,11,1,2,3,4],NIGHT_PRE=[6,7,8,9,10,11];
 const SETKEY='dr_settings_v1';
-const DEF_SET={name:'',dev:'TEAM-CM',start:'',contract:0,ext:0,note:'',lat:null,lon:null};
+const DEF_SET={name:'โครงการก่อสร้างอาคารอาคารพาณิชย์ และสำนักงาน ซ.สุคนธสวัสดิ์ 9/1',dev:'TEAM-CM',start:'2026-04-01',contract:150,ext:44,note:'',lat:13.8265355,lon:100.619929};
 
 let settings=Object.assign({},DEF_SET);
-try{const s=JSON.parse(localStorage.getItem(SETKEY)||'null');if(s&&typeof s==='object')settings=Object.assign(settings,s);}catch(e){}
+try{const s=JSON.parse(localStorage.getItem(SETKEY)||'null');
+  if(s&&typeof s==='object'){settings=Object.assign(settings,s);
+    // stored blanks (e.g. from an earlier neutral build) fall back to the project defaults; ext/note may legitimately be 0/empty
+    ['name','start','contract','lat','lon'].forEach(k=>{const v=settings[k];if(v===null||v===undefined||v===0||(typeof v==='string'&&v.trim()===''))settings[k]=DEF_SET[k];});}}catch(e){}
 function saveSettings(){try{localStorage.setItem(SETKEY,JSON.stringify(settings));}catch(e){}}
 
 function clockArr(list){const a=Array(12).fill(false);list.forEach(i=>a[i]=true);return a;}
@@ -343,7 +372,8 @@ function setStatus(t){$('status').textContent=t;$('status2').textContent=t;}
 /* ---------- state ---------- */
 let current=null,dirty=false,saveTimer=null,loadToken=0,curPersisted=false,photoJob=Promise.resolve(),wxEditSeq=0,wxTok=0,flushChain=Promise.resolve();
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
-function changed(){current.updated=Date.now();scheduleSave();schedulePreview();updateTotals();}
+let chgGen=0,shareStale=()=>{},shareReset=()=>{};
+function changed(){current.updated=Date.now();chgGen++;shareStale();scheduleSave();schedulePreview();updateTotals();}
 function scheduleSave(){dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(flush,1000);if(dbOK)setStatus('กำลังบันทึก...');}
 function flush(){flushChain=flushChain.then(doFlush,doFlush);return flushChain;}
 async function doFlush(){
@@ -378,7 +408,7 @@ async function loadDate(date){
     }}
     if(tk!==loadToken)return;
     current=rec?normalize(rec):defReport(date);curPersisted=!!rec;dirty=false;clearTimeout(saveTimer);
-    wxTok++;wxBtn(false);wxMsg='';
+    wxTok++;wxBtn(false);wxMsg='';chgGen++;shareReset();
     $('rDate').value=date;
     renderEditor();renderPreview();await refreshList();
     if(!rec)autoWeather(true);
@@ -625,8 +655,36 @@ function openLb(src){const lb=$('lb');lb.firstElementChild.src=src;lb.hidden=fal
 function closeLb(){const lb=$('lb');lb.hidden=true;lb.firstElementChild.removeAttribute('src');}
 
 /* ---------- preview ---------- */
-let pvTimer=null;
-function schedulePreview(){clearTimeout(pvTimer);pvTimer=setTimeout(renderPreview,150);}
+let pvTimer=null,pvDirty=false,decodeTok=0;
+function schedulePreview(){pvDirty=true;clearTimeout(pvTimer);pvTimer=setTimeout(renderPreview,150);}
+function setPrintBusy(b){[$('btnPrint'),$('btnPrint2')].forEach(x=>{x.disabled=b;x.textContent=b?'กำลังเตรียมรูป…':'พิมพ์';});}
+/* Pagination: lay the sheets out in an offscreen stage and measure real line positions, so Progress never overflows a page.
+   Overflowing lines go to continuation sheets (header + "Progress (ต่อ)"). Preview, print and PDF all use these same sheets. */
+const PAD_PX=10*96/25.4,CAP_PX=274*96/25.4;
+let msStage=null;
+function measureStage(){if(!msStage){msStage=document.createElement('div');msStage.id='msStage';document.body.appendChild(msStage);}return msStage;}
+function fitCount(sheet,els){
+  const top=sheet.getBoundingClientRect().top+PAD_PX;let k=0;
+  for(const e of els){if(e.getBoundingClientRect().bottom-top<=CAP_PX+0.5)k++;else break;}
+  return k;
+}
+function paginate(){
+  const lines=current.progress.split(/\r?\n/).filter(l=>l.trim()!=='');
+  const st=measureStage();st.textContent='';
+  const out=[],s1=page1(lines);st.appendChild(s1);out.push(s1);
+  let k=fitCount(s1,Array.from(s1.querySelectorAll('.rp-prog')));
+  if(lines.length&&k===0)s1.querySelector('.rp-progw').remove();
+  else Array.from(s1.querySelectorAll('.rp-prog')).slice(k).forEach(e=>e.remove());
+  let rest=lines.slice(k),first=lines.length>0&&k===0;
+  while(rest.length){
+    const s=el('div','sheet cont');header(s);const pw=el('div');pw.appendChild(bar(first?'Progress':'Progress (ต่อ)','salmon'));
+    rest.forEach(l=>pw.appendChild(el('div','rp-prog',l)));s.appendChild(pw);st.appendChild(s);
+    const es=Array.from(pw.querySelectorAll('.rp-prog')),kk=Math.max(1,fitCount(s,es));
+    es.slice(kk).forEach(e=>e.remove());
+    out.push(s);rest=rest.slice(kk);first=false;
+  }
+  return out;   // still children of msStage until the caller moves them
+}
 function header(sheet){
   sheet.appendChild(el('div','rp-bar','DAILY REPORT'));
   const c=calc(settings.start,settings.contract,settings.ext,current.date);
@@ -641,7 +699,7 @@ function ovRow(label,v,unit,pct,note){
   if(note!==undefined){f.appendChild(el('div','span2',note));}else{f.appendChild(el('div',null,unit));f.appendChild(el('div','p',pct));}
   return f;
 }
-function page1(){
+function page1(lines){
   const s=el('div','sheet first');header(s);
   const c=calc(settings.start,settings.contract,settings.ext,current.date);
   const ov=el('div','rp-ov');
@@ -687,8 +745,8 @@ function page1(){
   t.appendChild(tb);mw.appendChild(t);
   mw.appendChild(el('div','rp-tot','รวม '+current.manpower.reduce((a,b)=>a+b,0)+' คน'));
   s.appendChild(mw);
-  const pw=el('div');pw.style.marginTop='10px';pw.appendChild(bar('Progress','salmon'));
-  current.progress.split(/\r?\n/).filter(l=>l.trim()!=='').forEach(l=>pw.appendChild(el('div','rp-prog',l)));
+  const pw=el('div','rp-progw');pw.style.marginTop='10px';pw.appendChild(bar('Progress','salmon'));
+  lines.forEach(l=>pw.appendChild(el('div','rp-prog',l)));
   s.appendChild(pw);
   return s;
 }
@@ -709,11 +767,13 @@ function photoPages(){
 }
 function renderPreview(){
   if(!current)return;
-  clearTimeout(pvTimer);
-  $('pages').replaceChildren(page1(),...photoPages());
+  clearTimeout(pvTimer);pvDirty=false;
+  $('pages').replaceChildren(...paginate(),...photoPages());
   const ids=new Set(current.photos.map(p=>p.id));for(const k of Array.from(imgCache.keys()))if(!ids.has(k))imgCache.delete(k);
   fit();
-  if($('pvPane').offsetParent!==null)Array.from($('pages').querySelectorAll('img')).slice(0,8).forEach(i=>{if(i.decode)i.decode().catch(()=>{});});   // warm-up only while the preview is visible
+  {const imgs=Array.from($('pages').querySelectorAll('img')),dt=++decodeTok;   // decode works on hidden images too; keep Print disabled until done
+   if(imgs.length){setPrintBusy(true);Promise.all(imgs.map(i=>i.decode?i.decode().catch(()=>{}):null)).then(()=>{if(dt===decodeTok)setPrintBusy(false);});}else setPrintBusy(false);}
+  updateSetBanner();
   const dw=$('dateWarn'),cc=calc(settings.start,settings.contract,settings.ext,current.date);
   if(cc&&(cc.gone<1||cc.remaining<0)){dw.textContent='วันที่รายงานอยู่นอกช่วงสัญญา ('+(cc.gone<1?'ก่อนวันเริ่ม':'หลังวันสิ้นสุด')+') ค่า TIME GONE / REMAINING อาจไม่สมเหตุสมผล';dw.hidden=false;}else dw.hidden=true;
   const c=calc(settings.start,settings.contract,settings.ext,current.date);
@@ -732,7 +792,7 @@ function bindSettings(){
       if(e.value.trim()===''){settings[key]=null;saveSettings();wxBtn(false);return;}
       const v=parseFloat(e.value);if(isFinite(v)&&Math.abs(v)<=(key==='lat'?90:180)){settings[key]=v;saveSettings();wxBtn(false);}});});
   $('sMap').addEventListener('input',e=>{const p=parseMapsUrl(e.target.value);
-    if(p){settings.lat=p.lat;settings.lon=p.lon;$('sLat').value=p.lat;$('sLon').value=p.lon;saveSettings();wxBtn(false);$('mapHint').textContent='อ่านพิกัดได้: '+p.lat+', '+p.lon;}
+    if(p){settings.lat=p.lat;settings.lon=p.lon;$('sLat').value=p.lat;$('sLon').value=p.lon;saveSettings();wxBtn(false);maybeAutoWeather();$('mapHint').textContent='อ่านพิกัดได้: '+p.lat+', '+p.lon;}
     else if(e.target.value.trim())$('mapHint').textContent='ไม่พบพิกัดในลิงก์ (ลิงก์สั้น goo.gl แปลงในเบราว์เซอร์ไม่ได้ ต้องใช้ URL เต็ม)';});
   [['sName','name','s'],['sDev','dev','s'],['sStart','start','s'],['sContract','contract','n'],['sExt','ext','n'],['sNote','note','s']].forEach(([id,key,t])=>{
     const e=$(id);e.value=settings[key];
@@ -744,7 +804,11 @@ function bindSettings(){
 function settingsToUI(){
   [['sName','name'],['sDev','dev'],['sStart','start'],['sContract','contract'],['sExt','ext'],['sNote','note'],['sLat','lat'],['sLon','lon']].forEach(([id,k])=>{$(id).value=settings[k]==null?'':settings[k];});
 }
-function applySettings(s){Object.assign(settings,sanitizeSettings(s));saveSettings();settingsToUI();wxBtn(false);if(current)renderPreview();}
+function updateSetBanner(){$('setBanner').hidden=!(isNaN(toDays(settings.start))||!hasCoords());}
+function maybeAutoWeather(){
+  if(current&&hasCoords()&&current.weatherSource!=='manual'&&!current.weatherFetched&&!isNaN(toDays(current.date)))autoWeather(true);
+}
+function applySettings(s){Object.assign(settings,sanitizeSettings(s));saveSettings();settingsToUI();wxBtn(false);if(current){renderPreview();maybeAutoWeather();}}
 function sanitizeSettings(s){
   const o={};if(!s||typeof s!=='object')return o;
   if(typeof s.name==='string')o.name=s.name;if(typeof s.dev==='string')o.dev=s.dev;if(typeof s.note==='string')o.note=s.note;
@@ -785,11 +849,119 @@ async function doImport(file){
   alert('นำเข้าสำเร็จ '+ok+' รายงาน'+(failed.length?'\nล้มเหลว '+failed.length+' รายการ: '+failed.slice(0,10).join(', '):'')+(skipped?'\nข้ามรายการที่วันที่ไม่ถูกต้อง '+skipped+' รายการ':''));
   await loadDate(current.date);
 }
+/* ---------- in-app PDF (html2canvas + jsPDF, vendored next to this file, loaded lazily on first use) ----------
+   html2canvas 1.4.1 (MIT)  html2canvas.min.js  SHA-256 e87e550794322e574a1fda0c1549a3c70dae5a93d9113417a429016838eab8cb
+   jsPDF 2.5.2 (MIT)        jspdf.umd.min.js    SHA-256 85ba2cc3ff858a20fa49fe6e457bec863ea40b55a9f3725e58a940e62f6f61a4
+   (npm registry tarballs, dist/ files unmodified) */
+function loadScript(src){return new Promise((res,rej)=>{
+  const s=document.createElement('script');let t=null;
+  const fail=m=>{clearTimeout(t);s.remove();rej(new Error(m));};
+  s.src=src;s.onload=()=>{clearTimeout(t);res();};
+  s.onerror=()=>fail('โหลด '+src+' ไม่ได้ (ต้องวางไฟล์นี้ไว้โฟลเดอร์เดียวกับ DailyReport.html)');
+  t=setTimeout(()=>fail('โหลด '+src+' นานเกิน 20 วินาที'),20000);
+  document.head.appendChild(s);});}
+let libsP=null;
+function loadPdfLibs(){
+  if(window.html2canvas&&window.jspdf&&window.jspdf.jsPDF)return Promise.resolve();
+  if(!libsP)libsP=(async()=>{if(!window.html2canvas)await loadScript('html2canvas.min.js');if(!(window.jspdf&&window.jspdf.jsPDF))await loadScript('jspdf.umd.min.js');})().catch(e=>{libsP=null;throw e;});
+  return libsP;
+}
+function canShareFile(f){try{return !!(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]}));}catch(e){return false;}}
+// iOS/iPadOS page opened from an embedded viewer (OneDrive/Files app: file:, blob:, content: ...) - not Safari, not http(s)
+function embeddedIOS(){
+  const ua=navigator.userAgent||'';
+  const ios=/iPad|iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+  return ios&&location.protocol!=='http:'&&location.protocol!=='https:';
+}
+function copyUrl(){
+  const a=$('iosUrl'),t=a.href,msg=$('copyMsg');
+  const fallback=()=>{try{const r=document.createRange();r.selectNodeContents(a);const s=getSelection();s.removeAllRanges();s.addRange(r);
+    msg.textContent=document.execCommand&&document.execCommand('copy')?'คัดลอกแล้ว':'เลือกลิงก์แล้ว — กดค้างเพื่อคัดลอก';}catch(e){msg.textContent='เลือกลิงก์แล้ว — กดค้างเพื่อคัดลอก';}};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>{msg.textContent='คัดลอกแล้ว';},fallback);else fallback();
+}
+let pdfBusy=false,pdfPend=null;
+function pdfUI(msg,act,share){$('pdfBox').hidden=false;$('pdfMsg').textContent=msg;$('pdfAct').hidden=!act;$('bPdfShare').hidden=!share;$('pdfClose').hidden=false;}
+function clearPdf(){if(pdfPend&&pdfPend.url)URL.revokeObjectURL(pdfPend.url);pdfPend=null;}
+const nextFrame=()=>new Promise(r=>setTimeout(r,30));
+async function prepClone(sheet){
+  // inline SVG pies -> <img> (same size/margins) so rendering does not depend on html2canvas SVG handling
+  for(const sv0 of Array.from(sheet.querySelectorAll('svg'))){
+    const r=sv0.getBoundingClientRect(),cs=getComputedStyle(sv0);
+    sv0.setAttribute('width',r.width);sv0.setAttribute('height',r.height);
+    const im=new Image();im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(sv0));
+    im.style.cssText='width:'+r.width+'px;height:'+r.height+'px;flex:none;display:'+(cs.display==='inline'?'block':cs.display)+';margin:'+cs.margin;
+    try{await im.decode();}catch(e){}
+    sv0.replaceWith(im);
+  }
+  await Promise.all(Array.from(sheet.querySelectorAll('img')).map(i=>i.decode?i.decode().catch(()=>{}):null));
+  // html2canvas ignores object-fit: size each photo explicitly (contain-fit, centred by the flex box)
+  sheet.querySelectorAll('.rp-ph').forEach(box=>{
+    const im=box.querySelector('img');if(!im||!im.naturalWidth)return;
+    const bw=box.clientWidth-2,bh=box.clientHeight-2,s=Math.min(bw/im.naturalWidth,bh/im.naturalHeight);
+    im.style.cssText='max-width:none;max-height:none;object-fit:fill;display:block;width:'+(im.naturalWidth*s)+'px;height:'+(im.naturalHeight*s)+'px';
+  });
+}
+async function makePdf(){
+  if(pdfBusy)return;
+  const ed=$('editor');
+  if(ed.inert){pdfUI('กำลังโหลดรายงาน กรุณารอสักครู่แล้วลองใหม่');return;}
+  pdfBusy=true;clearPdf();ed.inert=true;   // no date switching/editing while generating: content and filename stay on one report
+  const btns=[$('btnPdf'),$('btnPdf2')];btns.forEach(b=>b.disabled=true);
+  const stage=document.createElement('div');stage.id='pdfStage';
+  try{
+    pdfUI('กำลังเตรียมสร้าง PDF ...');await nextFrame();
+    await loadPdfLibs();
+    await photoJob;renderPreview();
+    const date=current.date;
+    const src=Array.from($('pages').children),N=src.length;
+    document.body.appendChild(stage);
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const PXW=210*96/25.4;
+    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});
+    for(let i=0;i<N;i++){
+      pdfUI('กำลังสร้าง PDF หน้า '+(i+1)+'/'+N);await nextFrame();
+      stage.textContent='';const sheet=src[i].cloneNode(true);stage.appendChild(sheet);
+      let cv=null;
+      try{
+        await prepClone(sheet);
+        cv=await window.html2canvas(sheet,{scale:2,useCORS:false,backgroundColor:'#ffffff',logging:false,windowWidth:Math.ceil(PXW)+40,
+          // render only this sheet: nothing else (editor, preview pages, thumbnails) is cloned or decoded
+          ignoreElements:n=>n.parentNode===document.body&&n.tagName!=='SCRIPT'&&!n.contains(sheet),
+          onclone:(doc,elem)=>{Array.from(doc.body.children).forEach(c=>{if(!c.contains(elem))c.remove();});}});
+        const data=cv.toDataURL('image/jpeg',0.85);
+        if(i>0)pdf.addPage('a4','portrait');
+        pdf.addImage(data,'JPEG',0,0,210,297,undefined,'FAST');
+      }finally{if(cv){cv.width=cv.height=0;}stage.textContent='';}
+    }
+    const blob=pdf.output('blob');
+    const name='Daily Report('+dotted(date)+').pdf';
+    const file=new File([blob],name,{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);pdfPend={file,name,url};
+    const a=$('pdfDl');a.href=url;a.download=name;
+    const info=N+' หน้า, '+Math.round(blob.size/1024)+' KB';
+    if(canShareFile(file))pdfUI('สร้าง PDF เสร็จแล้ว ('+info+')',true,true);
+    else if(embeddedIOS()||!('download' in document.createElement('a'))){pdfUI('เบราว์เซอร์นี้บันทึกไฟล์ไม่ได้ — เปิดใน Safari ที่ https://teamtcm001-cyber.github.io/daily-report/',false,false);}
+    else{a.click();pdfUI('ดาวน์โหลดแล้ว: '+name+' ('+info+') หากไม่ขึ้น ให้กด "ดาวน์โหลด"',true,false);}
+  }catch(e){
+    pdfUI('สร้าง PDF ไม่สำเร็จ: '+(e&&e.message||e));
+  }finally{
+    if(stage.parentNode)stage.remove();
+    ed.inert=false;btns.forEach(b=>b.disabled=false);pdfBusy=false;
+  }
+}
 function bindActions(){
+  $('btnPdf').onclick=makePdf;$('btnPdf2').onclick=makePdf;
+  $('pdfClose').onclick=()=>{clearPdf();$('pdfBox').hidden=true;};
+  $('bPdfShare').onclick=()=>{   // navigator.share is called synchronously inside this tap
+    if(!pdfPend)return;
+    const fail=e=>pdfUI('แชร์ไม่สำเร็จ ('+(e&&e.name||'error')+') กรุณาใช้ "ดาวน์โหลด"',true,true);
+    let pr;try{pr=navigator.share({files:[pdfPend.file],title:pdfPend.name});}catch(e){fail(e);return;}
+    pr.then(()=>{},e=>{if(e&&e.name==='AbortError')return;fail(e);});
+  };
   const doPrint=()=>{
     const old=document.title;const d=current.date.split('-');
     document.title='Daily Report('+d[0]+'.'+d[1]+'.'+d[2]+')';
-    renderPreview();   // synchronous; cached <img> elements are reused so they are normally already decoded
+    if(pvDirty)renderPreview();   // normally already rendered and decoded; keep window.print() synchronous
     const mq=window.matchMedia?window.matchMedia('print'):null;let done=false;
     const onmq=e=>{if(!e.matches)restore();};
     const restore=()=>{if(done)return;done=true;document.title=old;window.removeEventListener('afterprint',restore);if(mq&&mq.removeEventListener)mq.removeEventListener('change',onmq);};
@@ -857,14 +1029,23 @@ function bindActions(){
   }
   $('bExp1').onclick=()=>doExport('cur',false);
   $('bExpAll').onclick=()=>doExport('all',false);
-  let pend=null;
-  function hideShare(){if(pend&&pend.url)URL.revokeObjectURL(pend.url);pend=null;$('shareBox').hidden=true;$('shareErr').textContent='';}
+  let pend=null,shareBusy=false;
+  const shVis=v=>{$('bShareGo').hidden=!v;$('shareDl').hidden=!v;};
+  function hideShare(){if(pend&&pend.url)URL.revokeObjectURL(pend.url);pend=null;$('shareBox').hidden=true;$('shareErr').textContent='';shVis(true);}
+  const staleMsg=()=>{shVis(false);$('shareErr').textContent='ข้อมูลเปลี่ยนแล้ว กรุณาเตรียมใหม่';$('shareBox').hidden=false;};
+  shareReset=hideShare;
+  shareStale=()=>{if(!pend)return;if(pend.url)URL.revokeObjectURL(pend.url);pend=null;staleMsg();};
   async function prepShare(kind){
-    hideShare();
+    if(shareBusy)return;shareBusy=true;
+    const bs=[$('bShare1'),$('bShareAll')];bs.forEach(b=>b.disabled=true);
+    hideShare();const g=chgGen;
     try{
-      const x=await getExport(kind);const file=new File([x.text],x.name,{type:'application/json'});const url=URL.createObjectURL(file);
-      pend={file,name:x.name,url};const a=$('shareDl');a.href=url;a.download=x.name;$('shareBox').hidden=false;
+      const x=await getExport(kind);
+      if(g!==chgGen){staleMsg();return;}
+      const file=new File([x.text],x.name,{type:'application/json'});const url=URL.createObjectURL(file);
+      pend={file,name:x.name,url};const a=$('shareDl');a.href=url;a.download=x.name;shVis(true);$('shareBox').hidden=false;
     }catch(e){alert('เตรียมไฟล์ไม่สำเร็จ: '+(e&&e.message||e));}
+    finally{shareBusy=false;bs.forEach(b=>b.disabled=false);}
   }
   $('bShare1').onclick=()=>prepShare('cur');
   $('bShareAll').onclick=()=>prepShare('all');
@@ -888,6 +1069,9 @@ function bindActions(){
 /* ---------- init ---------- */
 (async function init(){
   bindSettings();buildEditor();bindActions();wxBtn(false);
+  $('bBanImp').onclick=()=>$('fImp').click();
+  $('bBanSet').onclick=()=>{const d=$('dSet');d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'});};
+  $('bCopyUrl').onclick=copyUrl;if(embeddedIOS())$('iosWarn').hidden=false;
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});}catch(e){}
   try{const cv=document.createElement('canvas');cv.width=cv.height=180;const x=cv.getContext('2d');x.fillStyle='#1565c0';x.fillRect(0,0,180,180);
     x.fillStyle='#fff';x.font='bold 84px Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('DR',90,95);
