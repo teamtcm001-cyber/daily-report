@@ -196,12 +196,17 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
   <div class="row"><label class="grow"><span class="note">วันเริ่มสัญญา (START)</span><input type="date" id="sStart"></label>
    <label class="grow"><span class="note">ระยะสัญญา (วัน)</span><input type="number" min="0" step="1" id="sContract"></label>
    <label class="grow"><span class="note">ขยายเวลา (วัน)</span><input type="number" min="0" step="1" id="sExt"></label></div>
+  <div class="note"><b>ขยายเวลาเพิ่มเติม</b> (ไม่บังคับ — เว้นว่างถ้าไม่มี)</div>
+  <div class="row"><label class="grow"><span class="note">วันแล้วเสร็จใหม่</span><input type="date" id="sRevFinish"></label>
+   <label class="grow"><span class="note">จำนวนวันขยายรวม (แสดงในหมายเหตุ)</span><input type="number" min="0" step="1" id="sRevDays"></label>
+   <label class="grow"><span class="note">มีผลตั้งแต่วันที่</span><input type="date" id="sRevFrom"></label></div>
   <div class="row"><label class="grow"><span class="note">ที่ตั้งโครงการ - ละติจูด (lat)</span><input type="number" step="any" id="sLat"></label>
    <label class="grow"><span class="note">ลองจิจูด (lon)</span><input type="number" step="any" id="sLon"></label></div>
   <label class="f"><span>วางลิงก์ Google Maps แบบเต็ม เพื่อดึงพิกัดอัตโนมัติ (ต้องมี !3d..!4d.. หรือ @lat,lon)</span><input type="text" id="sMap" placeholder="https://www.google.com/maps/place/.../@13.82,100.61,17z/..."></label>
   <div class="note" id="mapHint">หมายเหตุ: ลิงก์สั้น (maps.app.goo.gl / goo.gl) แปลงในเบราว์เซอร์ไม่ได้ ให้เปิดลิงก์ในเบราว์เซอร์ แล้วคัดลอก URL เต็มจากแถบที่อยู่มาวาง หรือกรอกพิกัดเอง</div>
   <label class="f"><span>ข้อความหมายเหตุการขยายเวลา (ใช้ {n} แทนจำนวนวัน, เว้นว่าง = อัตโนมัติ)</span><input type="text" id="sNote" placeholder="(ขยายระยะเวลา {n} วัน)"></label>
   <div class="note" id="calcInfo"></div>
+  <div class="warn" id="setWarn" hidden></div>
  </details>
 
  <section class="card"><h2>รายงานประจำวัน</h2>
@@ -279,20 +284,25 @@ function toDays(s){
   return Math.round(t/86400000);
 }
 function fmtDays(n){const d=new Date(n*86400000);return d.getUTCDate()+'-'+MON[d.getUTCMonth()]+'-'+String(d.getUTCFullYear()).slice(-2);}
-function calc(startStr,contract,ext,dateStr){
+function calc(startStr,contract,ext,dateStr,rev){
   const start=toDays(startStr),date=toDays(dateStr);
   if(isNaN(start)||isNaN(date)||!(contract>=1))return null;
-  const finish=start+contract-1+ext;
-  const months=(finish-start)/30;
+  const baseFinish=start+contract-1+ext;
+  const summary=baseFinish-start+1;          // SUMMARY and MONTH always come from the base contract
+  const months=(baseFinish-start)/30;
+  let finish=baseFinish,revised=false;
+  const rf=rev?toDays(rev.finish):NaN;
+  if(!isNaN(rf)){let rfrom=rev.from?toDays(rev.from):NaN;if(isNaN(rfrom))rfrom=baseFinish+1;if(date>=rfrom){revised=true;finish=rf;}}
   const gone=date-start+1;
-  const remaining=finish-start-gone+1;
-  const summary=gone+remaining;
-  const pct=x=>summary?(x/summary*100):0;
-  return {finish,months:months.toFixed(2),gone,remaining,summary,
+  const remaining=revised?(finish-date):(finish-start-gone+1);
+  const tot=gone+remaining;                  // base: equals summary; revised: revFinish-start+1
+  const pct=x=>tot?(x/tot*100):0;
+  return {finish,months:months.toFixed(2),gone,remaining,summary,revised,
     pGone:pct(gone).toFixed(2),pRem:pct(remaining).toFixed(2),
     startTxt:fmtDays(start),finishTxt:fmtDays(finish),dateTxt:fmtDays(date)};
 }
 //#CALC-END
+function calcS(d){return calc(settings.start,settings.contract,settings.ext,d,{finish:settings.revFinish,from:settings.revFrom});}
 
 //#WX-START
 const RAIN_MM=0.5;                                   // precipitation >= this (mm/h) => Rainy
@@ -323,11 +333,29 @@ const MPN=[['วิศวกร','โฟร์แมน','ช่างเทค�
 const MPFLAT=[].concat(MPN[0],MPN[1],MPN[2]);
 const DAY_DEF=[8,9,10,11,1,2,3,4],NIGHT_PRE=[6,7,8,9,10,11];
 const SETKEY='dr_settings_v1';
-const DEF_SET={name:'โครงการก่อสร้างอาคารอาคารพาณิชย์ และสำนักงาน ซ.สุคนธสวัสดิ์ 9/1',dev:'TEAM-CM',start:'2026-04-01',contract:150,ext:75,note:'',lat:13.8265355,lon:100.619929};
+const DEF_SET={name:'โครงการก่อสร้างอาคารอาคารพาณิชย์ และสำนักงาน ซ.สุคนธสวัสดิ์ 9/1',dev:'TEAM-CM',start:'2026-04-01',contract:150,ext:44,note:'',lat:13.8265355,lon:100.619929,revFinish:'2026-11-12',revDays:75,revFrom:'2026-10-12'};
 
+// Older settings lacked the revised-finish fields (and some stored the extension as ext=75). Returns the fields to add/replace.
+function migrateSettings(s,fallbackName){
+  const nm=(typeof s.name==='string'&&s.name.trim())?s.name.trim():String(fallbackName||'').trim();
+  const proj=(nm===DEF_SET.name||nm==='');      // only the P06844 project gets the project-specific revision
+  const o={};
+  if(proj){
+    const e=Number(s.ext);if(e===75||e===44)o.ext=44;
+    o.revFinish=DEF_SET.revFinish;o.revDays=DEF_SET.revDays;o.revFrom=DEF_SET.revFrom;
+    const n=String(s.note==null?'':s.note).trim();
+    if(n==='(ขยายระยะเวลา 44 วัน)'||n==='(ขยายระยะเวลา 75 วัน)')o.note='';   // only the old auto texts; custom notes / {n} templates are kept
+  }else{o.revFinish='';o.revDays=0;o.revFrom='';}
+  return o;
+}
 let settings=Object.assign({},DEF_SET);
 try{const s=JSON.parse(localStorage.getItem(SETKEY)||'null');
   if(s&&typeof s==='object'){settings=Object.assign(settings,s);
+    if(!('revFinish' in s)){   // one-time migration
+      Object.assign(settings,migrateSettings(s,settings.name));
+      try{localStorage.setItem(SETKEY,JSON.stringify(settings));}catch(e2){}
+    }
+    ['contract','ext','revDays'].forEach(k=>{const v=Number(settings[k]);settings[k]=(settings[k]!==null&&settings[k]!==''&&Number.isInteger(v)&&v>=0&&v<=99999)?v:DEF_SET[k];});
     // stored blanks (e.g. from an earlier neutral build) fall back to the project defaults; ext/note may legitimately be 0/empty
     ['name','start','contract','lat','lon'].forEach(k=>{const v=settings[k];if(v===null||v===undefined||v===0||(typeof v==='string'&&v.trim()===''))settings[k]=DEF_SET[k];});}}catch(e){}
 function saveSettings(){try{localStorage.setItem(SETKEY,JSON.stringify(settings));}catch(e){}}
@@ -687,12 +715,12 @@ function paginate(){
 }
 function header(sheet){
   sheet.appendChild(el('div','rp-bar','DAILY REPORT'));
-  const c=calc(settings.start,settings.contract,settings.ext,current.date);
+  const c=calcS(current.date);
   const h=el('div','rp-head');h.append(el('span',null,'DEVELOPED BY : '+settings.dev),el('span',null,isNaN(toDays(current.date))?'':fmtDays(toDays(current.date))));
   sheet.appendChild(h);sheet.appendChild(el('div','rp-proj',settings.name));
 }
 function bar(text,cls){return el('div','rp-bar '+(cls||''),text);}
-function extNote(){const n=settings.ext;if(!(n>0))return '';const t=(settings.note||'').trim();return t?t.replace(/\{n\}/g,n):'(ขยายระยะเวลา '+n+' วัน)';}
+function extNote(revised){const n=revised?settings.revDays:settings.ext;if(!(n>0))return '';const t=(settings.note||'').trim();return t?t.replace(/\{n\}/g,n):'(ขยายระยะเวลา '+n+' วัน)';}
 function ovRow(label,v,unit,pct,note){
   const f=document.createDocumentFragment();
   f.appendChild(el('div',null,label));f.appendChild(el('div','v',v));
@@ -701,13 +729,13 @@ function ovRow(label,v,unit,pct,note){
 }
 function page1(lines){
   const s=el('div','sheet first');header(s);
-  const c=calc(settings.start,settings.contract,settings.ext,current.date);
+  const c=calcS(current.date);
   const ov=el('div','rp-ov');
   const b1=el('div','rp-bar blue','Overall Project'),b2=el('div','rp-bar blue v',c?c.months:'—'),b3=el('div','rp-bar blue','MONTH'),b4=el('div','rp-bar blue','');
   b2.style.textAlign='right';ov.append(b1,b2,b3,b4);
   if(c){
     ov.appendChild(ovRow('START',c.startTxt,'','',''));
-    ov.appendChild(ovRow('FINISH',c.finishTxt,'','',extNote()));
+    ov.appendChild(ovRow('FINISH',c.finishTxt,'','',extNote(c.revised)));
     ov.appendChild(ovRow('TIME GONE',String(c.gone),'Days',c.pGone+'%'));
     ov.appendChild(ovRow('REMAINING',String(c.remaining),'Days',c.pRem+'%'));
     ov.appendChild(ovRow('SUMMARY',String(c.summary),'Days','100%'));
@@ -774,9 +802,13 @@ function renderPreview(){
   {const imgs=Array.from($('pages').querySelectorAll('img')),dt=++decodeTok;   // decode works on hidden images too; keep Print disabled until done
    if(imgs.length){setPrintBusy(true);Promise.all(imgs.map(i=>i.decode?i.decode().catch(()=>{}):null)).then(()=>{if(dt===decodeTok)setPrintBusy(false);});}else setPrintBusy(false);}
   updateSetBanner();
-  const dw=$('dateWarn'),cc=calc(settings.start,settings.contract,settings.ext,current.date);
+  const dw=$('dateWarn'),cc=calcS(current.date);
   if(cc&&(cc.gone<1||cc.remaining<0)){dw.textContent='วันที่รายงานอยู่นอกช่วงสัญญา ('+(cc.gone<1?'ก่อนวันเริ่ม':'หลังวันสิ้นสุด')+') ค่า TIME GONE / REMAINING อาจไม่สมเหตุสมผล';dw.hidden=false;}else dw.hidden=true;
-  const c=calc(settings.start,settings.contract,settings.ext,current.date);
+  {const sw=$('setWarn'),w=[],st=toDays(settings.start),rf=toDays(settings.revFinish),rfm=toDays(settings.revFrom);
+   if(!isNaN(rf)&&!isNaN(st)&&rf<st)w.push('วันแล้วเสร็จใหม่อยู่ก่อนวันเริ่มสัญญา');
+   if(!isNaN(rf)&&!isNaN(rfm)&&rfm>rf)w.push('"มีผลตั้งแต่วันที่" อยู่หลังวันแล้วเสร็จใหม่');
+   sw.textContent=w.join(' / ');sw.hidden=!w.length;}
+  const c=calcS(current.date);
   $('calcInfo').textContent=c?('สิ้นสุด '+c.finishTxt+' | '+c.months+' เดือน | ผ่านไป '+c.gone+' วัน ('+c.pGone+'%) | คงเหลือ '+c.remaining+' วัน ('+c.pRem+'%)'):'ตั้งค่าวันเริ่มสัญญาและระยะสัญญา (≥1 วัน) ในตั้งค่าโครงการ เพื่อคำนวณ TIME GONE / REMAINING';
 }
 function fit(){
@@ -794,27 +826,30 @@ function bindSettings(){
   $('sMap').addEventListener('input',e=>{const p=parseMapsUrl(e.target.value);
     if(p){settings.lat=p.lat;settings.lon=p.lon;$('sLat').value=p.lat;$('sLon').value=p.lon;saveSettings();wxBtn(false);maybeAutoWeather();$('mapHint').textContent='อ่านพิกัดได้: '+p.lat+', '+p.lon;}
     else if(e.target.value.trim())$('mapHint').textContent='ไม่พบพิกัดในลิงก์ (ลิงก์สั้น goo.gl แปลงในเบราว์เซอร์ไม่ได้ ต้องใช้ URL เต็ม)';});
-  [['sName','name','s'],['sDev','dev','s'],['sStart','start','s'],['sContract','contract','n'],['sExt','ext','n'],['sNote','note','s']].forEach(([id,key,t])=>{
+  [['sName','name','s'],['sDev','dev','s'],['sStart','start','s'],['sContract','contract','n'],['sExt','ext','n'],['sRevFinish','revFinish','s'],['sRevDays','revDays','n'],['sRevFrom','revFrom','s'],['sNote','note','s']].forEach(([id,key,t])=>{
     const e=$(id);e.value=settings[key];
     e.addEventListener('input',()=>{
       if(t==='n'){const v=Math.floor(+e.value);if(!isFinite(v)||v<0||v>99999)return;settings[key]=v;}
-      else{if(key==='start'&&e.value!==''&&isNaN(toDays(e.value)))return;settings[key]=e.value;}
+      else{if((key==='start'||key==='revFinish'||key==='revFrom')&&e.value!==''&&isNaN(toDays(e.value)))return;settings[key]=e.value;}
       saveSettings();schedulePreview();});});
 }
 function settingsToUI(){
-  [['sName','name'],['sDev','dev'],['sStart','start'],['sContract','contract'],['sExt','ext'],['sNote','note'],['sLat','lat'],['sLon','lon']].forEach(([id,k])=>{$(id).value=settings[k]==null?'':settings[k];});
+  [['sName','name'],['sDev','dev'],['sStart','start'],['sContract','contract'],['sExt','ext'],['sRevFinish','revFinish'],['sRevDays','revDays'],['sRevFrom','revFrom'],['sNote','note'],['sLat','lat'],['sLon','lon']].forEach(([id,k])=>{$(id).value=settings[k]==null?'':settings[k];});
 }
 function updateSetBanner(){$('setBanner').hidden=!(isNaN(toDays(settings.start))||!hasCoords());}
 function maybeAutoWeather(){
   if(current&&hasCoords()&&current.weatherSource!=='manual'&&!current.weatherFetched&&!isNaN(toDays(current.date)))autoWeather(true);
 }
-function applySettings(s){Object.assign(settings,sanitizeSettings(s));saveSettings();settingsToUI();wxBtn(false);if(current){renderPreview();maybeAutoWeather();}}
+function applySettings(s){const t=(s&&typeof s==='object')?Object.assign({},s):{};if(!('revFinish' in t))Object.assign(t,migrateSettings(t,settings.name));Object.assign(settings,sanitizeSettings(t));saveSettings();settingsToUI();wxBtn(false);if(current){renderPreview();maybeAutoWeather();}}
 function sanitizeSettings(s){
   const o={};if(!s||typeof s!=='object')return o;
   if(typeof s.name==='string')o.name=s.name;if(typeof s.dev==='string')o.dev=s.dev;if(typeof s.note==='string')o.note=s.note;
   if(!isNaN(toDays(s.start)))o.start=s.start;
   if(Number.isInteger(s.contract)&&s.contract>=0&&s.contract<=99999)o.contract=s.contract;
   if(Number.isInteger(s.ext)&&s.ext>=0&&s.ext<=99999)o.ext=s.ext;
+  if(typeof s.revFinish==='string'&&(s.revFinish===''||!isNaN(toDays(s.revFinish))))o.revFinish=s.revFinish;
+  if(typeof s.revFrom==='string'&&(s.revFrom===''||!isNaN(toDays(s.revFrom))))o.revFrom=s.revFrom;
+  if(Number.isInteger(s.revDays)&&s.revDays>=0&&s.revDays<=99999)o.revDays=s.revDays;
   if(typeof s.lat==='number'&&Math.abs(s.lat)<=90)o.lat=s.lat;
   if(typeof s.lon==='number'&&Math.abs(s.lon)<=180)o.lon=s.lon;
   return o;
